@@ -99,16 +99,19 @@ jobs:
         run: |
           args=("--$BUILD_PLATFORM" "--$BUILD_ARCH" --publish never)
           export CSC_IDENTITY_AUTO_DISCOVERY=false
-          if [[ -n "$CSC_LINK" ]]; then
+          if [[ -z "$CSC_LINK" ]]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+          fi
+          if [[ -n "${CSC_LINK:-}" ]]; then
             export CSC_IDENTITY_AUTO_DISCOVERY=true
           fi
-          if [[ "$BUILD_PLATFORM" == mac && -n "$CSC_LINK" ]]; then
+          if [[ "$BUILD_PLATFORM" == mac && -n "${CSC_LINK:-}" ]]; then
             args+=(--config.mac.identity= --config.mac.type=distribution --config.mac.hardenedRuntime=true --config.forceCodeSigning=true)
           fi
-          if [[ "$BUILD_PLATFORM" == win && -n "$CSC_LINK" ]]; then
+          if [[ "$BUILD_PLATFORM" == win && -n "${CSC_LINK:-}" ]]; then
             args+=(--config.forceCodeSigning=true)
           fi
-          if [[ "$BUILD_PLATFORM" == mac && -n "$CSC_LINK" && -n "$APPLE_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
+          if [[ "$BUILD_PLATFORM" == mac && -n "${CSC_LINK:-}" && -n "$APPLE_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
             args+=(--config.mac.notarize=true)
           fi
           npx electron-builder "${args[@]}"
