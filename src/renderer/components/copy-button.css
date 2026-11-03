@@ -1,0 +1,3 @@
+.copy-button[data-copied="true"] .copy-button-icon {
+  color: var(--success);
+}

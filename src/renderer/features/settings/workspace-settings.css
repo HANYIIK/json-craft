@@ -1,0 +1,227 @@
+.workspace-settings {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  background: var(--bg-app);
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+.workspace-settings-content {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px 44px 40px;
+}
+
+.workspace-settings-header {
+  padding-bottom: 30px;
+}
+
+.workspace-settings-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.workspace-settings-back {
+  gap: 7px;
+  padding: 6px 0;
+  color: var(--text-secondary);
+}
+
+.workspace-settings-header h1 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.5px;
+}
+
+.workspace-settings-header > p,
+.workspace-settings-section-title > p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.workspace-settings-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.workspace-settings-status-error {
+  color: var(--error);
+}
+
+.workspace-settings-section {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 20px 28px;
+  padding: 28px 0 32px;
+  border-top: 1px solid var(--border);
+}
+
+.workspace-settings-section-title h2 {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.workspace-settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  min-width: 0;
+}
+
+.workspace-settings-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workspace-settings-field > label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.workspace-settings-theme > .select-trigger {
+  max-width: 260px;
+}
+
+.workspace-settings-input-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workspace-settings-input-row > input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", "PingFang SC", monospace;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.workspace-settings-input-row > input::placeholder {
+  color: var(--text-subtle);
+  font-family: "DM Sans", "PingFang SC", sans-serif;
+}
+
+.workspace-settings-input-row > .button {
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.workspace-settings-field > p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.workspace-settings-history {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.workspace-settings-history > h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workspace-settings-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 12px 14px;
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  background: var(--error-soft);
+  color: var(--error);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.workspace-settings-error > span {
+  flex: 1 1 240px;
+}
+
+.workspace-settings-error > .button {
+  color: var(--error);
+}
+
+.workspace-settings-note {
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+@media (max-width: 850px) {
+  .workspace-settings-content {
+    padding: 24px 28px 32px;
+  }
+
+  .workspace-settings-section {
+    grid-template-columns: 140px minmax(0, 1fr);
+    column-gap: 24px;
+  }
+}
+
+@media (max-width: 670px) {
+  .workspace-settings-content {
+    padding-inline: 20px;
+  }
+
+  .workspace-settings-header {
+    padding-bottom: 24px;
+  }
+
+  .workspace-settings-navigation {
+    margin-bottom: 24px;
+  }
+
+  .workspace-settings-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding-block: 24px;
+  }
+}

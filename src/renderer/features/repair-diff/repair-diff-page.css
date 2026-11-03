@@ -1,0 +1,235 @@
+.repair-diff-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 26px 12px;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+.repair-diff-page[hidden] {
+  display: none;
+}
+.repair-diff-page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.repair-diff-page-header > .button {
+  margin-top: 1px;
+  padding: 5px 0;
+  color: var(--muted);
+}
+.repair-diff-page-header kbd {
+  margin-left: 4px;
+}
+.repair-diff-page-title {
+  min-width: 0;
+  flex: 1;
+}
+.repair-diff-page-title h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 5px;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+.repair-diff-page-title h1 > svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.repair-diff-page-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.repair-diff-file-count {
+  color: var(--text-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+  padding-top: 5px;
+}
+.repair-diff-page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.repair-diff-stage-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 280px;
+  min-width: 0;
+  max-width: 550px;
+}
+.repair-diff-stage-picker > label {
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.repair-diff-stage-picker > .select-trigger {
+  min-width: 0;
+  flex: 1;
+}
+.repair-diff-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.repair-diff-navigation .button {
+  padding: 7px 8px;
+}
+.repair-diff-position {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.repair-diff-position strong {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.repair-diff-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px solid var(--warning-border);
+  border-radius: 5px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11px;
+  line-height: 1.7;
+  flex-shrink: 0;
+}
+.repair-diff-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.repair-diff-notice p {
+  margin: 0;
+}
+.repair-diff-source-path {
+  margin: 0 0 9px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.repair-diff-file {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--editor-bg);
+}
+.repair-diff-file-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-panel);
+}
+.repair-diff-file-header > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.repair-diff-file-header > span:first-child {
+  border-right: 1px solid var(--line);
+}
+.repair-diff-file-header small {
+  margin-left: auto;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.repair-diff-minus {
+  color: var(--diff-removed-text);
+}
+.repair-diff-plus {
+  color: var(--diff-added-text);
+}
+.repair-diff-file-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.repair-diff-file-body > .repair-diff-editor {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.repair-diff-empty {
+  margin: auto;
+  padding: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.repair-diff-page-note {
+  margin: 9px 0 0;
+  color: var(--text-subtle);
+  font-size: 10px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .repair-diff-page {
+    padding: 16px 18px 10px;
+  }
+  .repair-diff-page-header {
+    gap: 14px;
+  }
+  .repair-diff-file-count {
+    display: none;
+  }
+  .repair-diff-page-toolbar {
+    gap: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .repair-diff-page {
+    padding: 12px 10px 8px;
+  }
+  .repair-diff-page-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .repair-diff-page-title {
+    flex-basis: 100%;
+  }
+  .repair-diff-stage-picker {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .repair-diff-navigation {
+    margin-left: 0;
+  }
+  .repair-diff-page-toolbar > .button {
+    margin-left: auto;
+  }
+}

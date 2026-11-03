@@ -1,0 +1,87 @@
+html[data-json-sidebar-motion] .sidebar {
+  view-transition-name: json-sidebar;
+}
+
+html[data-json-sidebar-motion] :is(.workspace, .settings-page):not([hidden]) {
+  view-transition-name: json-sidebar-workspace;
+}
+
+html[data-json-sidebar-motion] .titlebar-navigation {
+  view-transition-name: json-sidebar-navigation;
+}
+
+html[data-json-sidebar-motion] .titlebar-document {
+  view-transition-name: json-sidebar-document;
+}
+
+html[data-json-sidebar-motion]::view-transition,
+html[data-json-sidebar-motion]::view-transition-group(*),
+html[data-json-sidebar-motion]::view-transition-image-pair(*),
+html[data-json-sidebar-motion]::view-transition-old(*),
+html[data-json-sidebar-motion]::view-transition-new(*) {
+  pointer-events: none;
+}
+
+html[data-json-sidebar-motion]::view-transition-old(root),
+html[data-json-sidebar-motion]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-json-sidebar-motion]::view-transition-old(root) {
+  opacity: 0;
+}
+
+html[data-json-sidebar-motion]::view-transition-group(*) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+html[data-json-sidebar-motion]::view-transition-image-pair(*) {
+  overflow: hidden;
+}
+
+html[data-json-sidebar-motion]::view-transition-old(*),
+html[data-json-sidebar-motion]::view-transition-new(*) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+  mix-blend-mode: normal;
+  animation-duration: 160ms;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+html[data-json-sidebar-motion]::view-transition-image-pair(json-sidebar) {
+  overflow: visible;
+}
+
+html[data-json-sidebar-motion]::view-transition-old(json-sidebar) {
+  animation: json-sidebar-out 170ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+html[data-json-sidebar-motion]::view-transition-new(json-sidebar) {
+  animation: json-sidebar-in 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+@keyframes json-sidebar-out {
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes json-sidebar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-json-sidebar-motion]::view-transition-group(*),
+  html[data-json-sidebar-motion]::view-transition-old(*),
+  html[data-json-sidebar-motion]::view-transition-new(*) {
+    animation: none !important;
+  }
+}

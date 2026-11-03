@@ -1,0 +1,186 @@
+.repair-diff-editor {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+}
+
+.repair-diff-panels {
+  position: absolute;
+  z-index: 400;
+  inset-block: 0;
+  width: 50%;
+  pointer-events: none;
+}
+
+.repair-diff-panels-before {
+  left: 0;
+}
+
+.repair-diff-panels-after {
+  right: 0;
+}
+
+.repair-diff-panel-container {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.repair-diff-panels .cm-panels {
+  pointer-events: auto;
+}
+
+.repair-diff-editor > .cm-mergeView {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+.repair-diff-editor .cm-mergeViewEditors {
+  min-height: 100%;
+}
+
+.repair-diff-editor .cm-mergeViewEditor + .cm-mergeViewEditor {
+  border-left: 1px solid var(--border-strong);
+}
+
+.repair-diff-editor .cm-editor {
+  color: var(--editor-text);
+  background: var(--editor-bg);
+  font-size: 12px;
+}
+
+.repair-diff-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.repair-diff-editor .cm-scroller {
+  font-family: "JetBrains Mono", "PingFang SC", monospace;
+  line-height: 1.9;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+.repair-diff-editor .cm-content {
+  padding: 12px 0;
+  caret-color: var(--editor-cursor);
+}
+
+.repair-diff-editor .cm-line {
+  padding: 0 10px;
+}
+
+.repair-diff-editor .cm-gutters {
+  background: var(--editor-bg);
+  border: none;
+  color: var(--editor-gutter);
+}
+
+.repair-diff-editor .cm-lineNumbers .cm-gutterElement {
+  min-width: 35px;
+  padding: 0 5px 0 8px;
+}
+
+.repair-diff-editor .cm-changeGutter {
+  width: 18px;
+}
+
+.repair-diff-editor .cm-changedLineGutter {
+  position: relative;
+  width: 18px;
+  text-align: center;
+}
+
+.repair-diff-editor .cm-merge-a .cm-changedLine,
+.repair-diff-editor .cm-merge-a .cm-changedLineGutter {
+  background: var(--diff-removed-bg);
+}
+
+.repair-diff-editor .cm-merge-b .cm-changedLine,
+.repair-diff-editor .cm-merge-b .cm-changedLineGutter {
+  background: var(--diff-added-bg);
+}
+
+.repair-diff-editor .cm-merge-a .cm-changedLineGutter::before {
+  content: "−";
+  color: var(--diff-removed-text);
+}
+
+.repair-diff-editor .cm-merge-b .cm-changedLineGutter::before {
+  content: "+";
+  color: var(--diff-added-text);
+}
+
+.repair-diff-editor .cm-merge-a .cm-changedText {
+  background: color-mix(in srgb, var(--diff-removed-text) 27%, transparent);
+  background-image: none;
+  border-radius: 2px;
+}
+
+.repair-diff-editor .cm-merge-b .cm-changedText {
+  background: color-mix(in srgb, var(--diff-added-text) 27%, transparent);
+  background-image: none;
+  border-radius: 2px;
+}
+
+.repair-diff-editor .cm-cursor {
+  border-left-color: var(--editor-cursor);
+}
+
+.repair-diff-editor .cm-selectionBackground,
+.repair-diff-editor .cm-focused .cm-selectionBackground,
+.repair-diff-editor ::selection {
+  background: var(--editor-selection) !important;
+}
+
+.repair-diff-editor .cm-searchMatch {
+  background: var(--search-match);
+  outline: 1px solid var(--search-match-border);
+}
+
+.repair-diff-editor .cm-searchMatch-selected {
+  background: var(--search-match-selected);
+}
+
+.repair-diff-editor .cm-collapsedLines {
+  box-sizing: border-box;
+  height: 27px;
+  margin: 0;
+  padding: 2px 12px;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-family: "DM Sans", "PingFang SC", sans-serif;
+  font-size: 11px;
+  line-height: 21px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repair-diff-editor .cm-collapsedLines::before {
+  content: "↕";
+  margin-right: 8px;
+  color: var(--text-muted);
+}
+
+.repair-diff-editor .cm-collapsedLines:hover {
+  color: var(--accent);
+  background: var(--selection);
+}
+
+.repair-diff-editor .cm-collapsedLines:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

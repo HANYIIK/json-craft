@@ -1,0 +1,311 @@
+.json-editor {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+}
+
+.json-editor-code {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.json-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex: 0 0 26px;
+  height: 26px;
+  min-width: 0;
+  padding: 0 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--editor-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.json-breadcrumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.json-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.json-breadcrumb-separator {
+  color: var(--text-subtle);
+  font-size: 14px;
+}
+
+.json-breadcrumbs button {
+  max-width: 240px;
+  padding: 4px 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-family: "JetBrains Mono", "PingFang SC", monospace;
+  font-size: inherit;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.json-breadcrumbs button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.json-breadcrumbs button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.json-editor .cm-editor {
+  isolation: isolate;
+}
+
+.json-editor .cm-panels-top:has(> .cm-search) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  left: auto;
+  margin: 0;
+  width: min(450px, calc(100% - 16px));
+  max-height: 65%;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  box-shadow: 0 4px 16px var(--shadow-panel);
+  scrollbar-width: thin;
+}
+
+.json-editor .cm-panel.cm-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  align-items: center;
+  gap: 7px 6px;
+  padding: 8px 32px 8px 8px;
+  font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.json-editor .cm-panel.cm-search:has(.cm-search-toggle) {
+  padding-left: 31px;
+}
+
+.json-editor .cm-panel.cm-search br {
+  display: none;
+}
+
+.json-editor .cm-panel.cm-search input,
+.json-editor .cm-panel.cm-search button,
+.json-editor .cm-panel.cm-search label {
+  min-width: 0;
+  margin: 0;
+}
+
+.json-editor .cm-search .cm-textfield {
+  width: 100%;
+  height: 30px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", "PingFang SC", monospace;
+  font-size: 12px;
+}
+
+.json-editor .cm-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.json-editor .cm-search-field .cm-textfield {
+  padding-right: 78px;
+}
+
+.json-editor .cm-search-toggle {
+  position: absolute;
+  top: 1px;
+  left: -23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.json-editor .cm-search-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.json-editor .cm-search-toggle[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.json-editor .cm-search-replace {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  row-gap: 7px;
+}
+
+.json-editor .cm-search-replace:not([hidden]) {
+  display: grid;
+}
+
+.json-editor .cm-search-replace[hidden] {
+  display: none;
+}
+
+.json-editor .cm-search-count {
+  position: absolute;
+  inset: 0 7px 0 auto;
+  display: flex;
+  align-items: center;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.json-editor .cm-search-count-empty {
+  color: var(--red);
+}
+
+.json-editor .cm-search .cm-textfield[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.json-editor .cm-search .cm-textfield::placeholder {
+  color: var(--text-muted);
+  font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.json-editor .cm-search .cm-button {
+  height: 28px;
+  padding: 3px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-panel);
+  background-image: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.json-editor .cm-search .cm-button:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-hover);
+}
+
+.json-editor .cm-search .cm-button:active {
+  background: var(--selection);
+  background-image: none;
+}
+
+.json-editor .cm-panel.cm-search label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.json-editor .cm-panel.cm-search input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.json-editor .cm-search button[name="replaceAll"] {
+  grid-column: span 2;
+}
+
+.json-editor .cm-search label:first-of-type {
+  grid-column: 1 / 2;
+}
+
+.json-editor .cm-search label:last-of-type {
+  grid-column: span 2;
+}
+
+.json-editor .cm-panel.cm-search button[name="close"] {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  top: 8px;
+  right: 5px;
+  width: 24px;
+  height: 30px;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.json-editor .cm-panel.cm-search button[name="close"]:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.json-editor .cm-search :is(input, button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@container (max-width: 430px) {
+  .json-editor .cm-panel.cm-search {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .json-editor .cm-search-field,
+  .json-editor .cm-search-replace > .cm-textfield {
+    grid-column: 1 / -1;
+  }
+
+  .json-editor .cm-search .cm-button {
+    grid-column: span 2;
+  }
+
+  .json-editor .cm-search button[name="replace"],
+  .json-editor .cm-search button[name="replaceAll"] {
+    grid-column: span 3;
+  }
+
+  .json-editor .cm-panel.cm-search label {
+    grid-column: span 2;
+  }
+}

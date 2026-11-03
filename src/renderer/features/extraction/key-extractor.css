@@ -1,0 +1,256 @@
+.key-extractor {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  max-height: 220px;
+  margin-bottom: 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.key-form {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.key-form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.key-input-wrap {
+  flex: 1;
+  min-width: 100px;
+}
+
+.key-input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 6px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.key-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.key-input:disabled {
+  background: var(--bg-subtle);
+  color: var(--text-subtle);
+}
+
+.key-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+.key-body code {
+  font-family: "JetBrains Mono", "PingFang SC", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.key-current,
+.key-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 4px 11px 9px;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.key-current {
+  flex-wrap: wrap;
+  color: var(--accent);
+  align-items: center;
+}
+
+.key-current > span:first-of-type {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.key-current > code {
+  min-width: 0;
+}
+
+.key-current > svg,
+.key-message > svg {
+  margin-top: 2px;
+}
+
+.key-error {
+  color: var(--error);
+}
+
+.key-matches {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.key-matches > legend {
+  width: 100%;
+  padding: 3px 11px 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.key-match {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 11px;
+  border-top: 1px solid var(--border-subtle);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.key-match:hover {
+  background: var(--bg-hover);
+}
+
+.key-match-selected {
+  background: var(--bg-selected);
+}
+
+.key-match input[type="radio"] {
+  width: 13px;
+  height: 13px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.key-match-content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.key-match-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  min-width: 0;
+}
+
+.key-match-path {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.key-value-type {
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.key-occurrence {
+  font-size: 10px;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+.key-preview {
+  color: var(--text-subtle);
+  line-height: 1.6;
+}
+
+.key-selection-action {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-subtle);
+  font-size: 10px;
+}
+
+.key-limit {
+  margin: 0;
+  padding: 7px 11px 9px;
+  color: var(--warning);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .key-form {
+    flex-wrap: wrap;
+  }
+
+  .key-input-wrap {
+    min-width: 130px;
+  }
+
+  .key-reset {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 670px) {
+  .key-form-label {
+    min-width: 64px;
+  }
+
+  .key-input-wrap {
+    flex-basis: calc(100% - 82px);
+  }
+
+  .key-form > .button[type="submit"] {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .key-form {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .key-reset {
+    margin-left: 0;
+  }
+
+  .key-selection-action {
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .key-selection-action > span {
+    max-width: 90px;
+  }
+}

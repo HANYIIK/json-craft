@@ -1,0 +1,85 @@
+.delete-confirmation {
+  width: min(460px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  color: var(--text-primary);
+  background: var(--bg-panel);
+  box-shadow: 0 16px 64px var(--shadow-panel);
+}
+
+.delete-confirmation::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.delete-confirmation-content {
+  padding: 24px;
+}
+
+.delete-confirmation h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.delete-confirmation h2 svg {
+  flex-shrink: 0;
+  color: var(--error);
+}
+
+.delete-confirmation-name {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.delete-confirmation p {
+  margin: 12px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.delete-confirmation-path {
+  display: block;
+  max-height: 28vh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.delete-confirmation .delete-confirmation-error {
+  color: var(--error);
+}
+
+.delete-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.delete-confirmation .delete-confirmation-submit {
+  color: var(--error);
+  border-color: var(--error-border);
+  background: var(--error-soft);
+}
+
+.delete-confirmation .delete-confirmation-submit:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--error);
+}
