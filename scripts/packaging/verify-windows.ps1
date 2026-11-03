@@ -29,5 +29,14 @@ try {
 } finally {
   $uninstaller = Join-Path $target "Uninstall JSON Craft.exe"
   if (Test-Path $uninstaller) { Start-Process -FilePath $uninstaller -ArgumentList @("/S", "_?=$target") -Wait }
-  if (Test-Path $target) { Remove-Item $target -Recurse -Force }
+  for ($attempt = 1; $attempt -le 10; $attempt++) {
+    if (-not (Test-Path -LiteralPath $target)) { break }
+    try {
+      Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
+      break
+    } catch {
+      if ($attempt -eq 10) { throw }
+      Start-Sleep -Seconds 1
+    }
+  }
 }

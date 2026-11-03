@@ -18,8 +18,12 @@ def version_tuple(value):
     return parts + (0,) * (3 - len(parts))
 
 
-def run_tool(arguments):
-    return subprocess.run(arguments, check=True, capture_output=True, text=True, timeout=60).stdout
+def run_tool(arguments, pass_fds=()):
+    try:
+        return subprocess.run(arguments, check=True, capture_output=True, text=True, timeout=60, pass_fds=pass_fds).stdout
+    except subprocess.CalledProcessError as error:
+        details = error.stderr.strip() or error.stdout.strip() or str(error)
+        raise ValueError(f"{arguments[0]} failed ({error.returncode}): {details}") from error
 
 
 def minimum_versions(output):
@@ -75,7 +79,9 @@ def check_app(app, expected_architecture):
         architectures = run_tool(["lipo", "-archs", str(resolved)]).split()
         if expected not in architectures:
             raise ValueError(f"{candidate.relative_to(app)} does not support {expected}")
-        for architecture, required in minimum_versions(run_tool(["otool", "-l", str(resolved)])):
+        with resolved.open("rb") as stream:
+            output = run_tool(["otool", "-l", f"/dev/fd/{stream.fileno()}"], pass_fds=(stream.fileno(),))
+        for architecture, required in minimum_versions(output):
             if version_tuple(required) > declared:
                 raise ValueError(f"{candidate.relative_to(app)} ({architecture}) requires macOS {required}, app declares {minimum}")
     if not count:

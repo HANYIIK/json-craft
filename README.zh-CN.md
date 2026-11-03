@@ -28,10 +28,10 @@ JSON 内容全部在本机处理，无需账号、上传或云服务。文件使
 
 | 平台                                    | 安装包                                                                                                                      | 其他格式                                                                                               |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| macOS 13+ · Apple Silicon（M 系列芯片） | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.1-macOS-arm64.dmg)        | [ZIP](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.1-macOS-arm64.zip) |
-| macOS 13+ · Intel 芯片                  | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.1-macOS-x64.dmg)                  | [ZIP](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.1-macOS-x64.zip)   |
-| Windows · x64                           | [Windows x64 安装程序](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.1-Windows-x64.exe)     | —                                                                                                      |
-| Windows · ARM64                         | [Windows ARM64 安装程序](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.1-Windows-arm64.exe) | —                                                                                                      |
+| macOS 13+ · Apple Silicon（M 系列芯片） | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-arm64.dmg)        | [ZIP](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-arm64.zip) |
+| macOS 13+ · Intel 芯片                  | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-x64.dmg)                  | [ZIP](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-x64.zip)   |
+| Windows · x64                           | [Windows x64 安装程序](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-Windows-x64.exe)     | —                                                                                                      |
+| Windows · ARM64                         | [Windows ARM64 安装程序](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-Windows-arm64.exe) | —                                                                                                      |
 
 **macOS：** 打开 DMG，将 JSON Craft 拖入“应用程序”；或解压 ZIP 后将 App 移入“应用程序”。当前版本使用 ad-hoc 签名，**尚未经过 Apple 公证**。如果首次打开被系统拦截，请在“**系统设置 → 隐私与安全性 → 仍要打开**”中查看提示，并仅为从本仓库下载的文件确认打开，详见 [Apple 官方打开说明](https://support.apple.com/en-us/102445)。
 
