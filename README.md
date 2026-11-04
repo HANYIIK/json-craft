@@ -1,10 +1,10 @@
 # JSON Craft
 
-Make messy JSON readable.
+Make messy JSON readable. Make differences clear.
 
 **English** · [简体中文](README.zh-CN.md)
 
-A local-first desktop workspace for formatting, repairing and exploring JSON on macOS and Windows. Paste a compressed response, open a file, or drop in several files—JSON Craft formats the result automatically and keeps the original text available.
+A local-first desktop workspace for formatting, repairing, exploring and comparing JSON on macOS and Windows. Paste a compressed response, open a file, or drop in several files—JSON Craft formats the result automatically and keeps the original text available.
 
 [Download the latest release](https://github.com/HANYIIK/json-craft/releases/latest) · [Report an issue](https://github.com/HANYIIK/json-craft/issues)
 
@@ -14,10 +14,11 @@ A local-first desktop workspace for formatting, repairing and exploring JSON on 
 
 - **Format and unescape JSON.** Read compressed JSON and unwrap encoded JSON strings. Optionally decode JSON strings inside nested objects and arrays, while leaving ordinary text and Markdown links intact.
 - **Repair broken JSON with a clear audit trail.** Use `jsonrepair` to recover common syntax errors, inspect the actual edits and compare before and after in a dedicated diff view.
+- **Compare two JSON documents.** Format both inputs, recursively align the second document's object keys to the first, then review the remaining differences. Array items stay in their original order, and fields unique to either document remain visible.
 - **Extract a value by key.** Search every nesting level, choose the full path when a key occurs more than once, then format, copy or export just that value.
 - **Navigate with context.** Search and replace, fold objects and arrays, see an array's item count while folded, and jump to parent keys using the path bar. Expand either editor to fill the app.
 - **Work with multiple files.** Import or drag in several `.json` files, switch between saved entries, rename files, and confirm deletion before moving the associated file to the system Trash or Recycle Bin.
-- **Keep your workflow.** Edits save automatically. Choose your import, JSON file and history folders, copy results with one click, export them, or enable automatic copying after formatting.
+- **Keep your workflow.** Source workspace edits save automatically. Choose your import, JSON file and history folders, copy results with one click, export them, or enable automatic copying after formatting.
 - **Use your preferred appearance.** Light and dark themes, system theme detection, and English or Simplified Chinese, with preferences remembered across launches.
 
 JSON processing happens on your device. No account, upload or cloud service is required. Files use UTF-8 and may be up to **20 MiB** each.
@@ -28,10 +29,10 @@ Get the installer for your operating system and processor from [Releases](https:
 
 | Platform                             | Installer                                                                                                                    | Alternative                                                                                            |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| macOS 13+ · Apple Silicon (M-series) | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-arm64.dmg)         | [ZIP](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-arm64.zip) |
-| macOS 13+ · Intel                    | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-x64.dmg)                   | [ZIP](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-macOS-x64.zip)   |
-| Windows · x64                        | [Windows x64 installer](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-Windows-x64.exe)     | —                                                                                                      |
-| Windows · ARM64                      | [Windows ARM64 installer](https://github.com/HANYIIK/json-craft/releases/latest/download/JSON-Craft-0.1.2-Windows-arm64.exe) | —                                                                                                      |
+| macOS 13+ · Apple Silicon (M-series) | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-arm64.dmg)         | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-arm64.zip) |
+| macOS 13+ · Intel                    | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-x64.dmg)                   | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-x64.zip)   |
+| Windows · x64                        | [Windows x64 installer](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-Windows-x64.exe)     | —                                                                                                      |
+| Windows · ARM64                      | [Windows ARM64 installer](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-Windows-arm64.exe) | —                                                                                                      |
 
 **macOS:** Open the DMG and drag JSON Craft into Applications, or unzip the ZIP and move the app into Applications. This release uses an ad-hoc signature and is **not notarized by Apple**. If macOS blocks the first launch, review the message in **System Settings → Privacy & Security → Open Anyway** and approve only the copy you downloaded from this repository. See [Apple's first-open guidance](https://support.apple.com/en-us/102445).
 
@@ -45,6 +46,20 @@ Each release includes `SHA256SUMS` so you can check the downloaded files. Releas
 2. Read the automatically updated **Formatted JSON**. Turn recursive unescaping on or off depending on whether you want to expand embedded JSON strings.
 3. Need only one field? Enter its key in **Extract key**. If several paths match, select the one you want.
 4. Use **Copy** or **Export** beneath the result. Open **View differences** when a repair needs review.
+
+### Compare JSON without key-order noise
+
+Open **JSON Compare** below **New input** in the sidebar. Paste or import one JSON document on each side; you can also drop two `.json` files onto the comparison page. Both inputs format automatically using your unescaping, recursive unescaping, repair and indentation choices.
+
+![JSON Craft in English: two automatically formatted inputs in JSON Compare](resources/screenshots/comparison-inputs-en.png)
+
+Click **Align & compare** to open the diff. At each matching object path, the second document follows the first document's key order; right-only keys follow at the end. Objects inside arrays align by index, while array items themselves are never reordered. Values, number literals and duplicate keys are preserved by key alignment.
+
+Only the lines near differences appear by default. Jump between changes, expand hidden lines, or choose **Show full file**. Use **Back to editing** to revise your inputs and compare again; changing formatting options reprocesses the original text.
+
+![JSON Craft in English: aligned JSON comparison with additions, deletions and collapsed unchanged lines](resources/screenshots/comparison-result-en.png)
+
+Comparison drafts remain available when you switch pages during the current session. They are not saved to files or history and are cleared when the app closes.
 
 ### Extract exactly what you need
 
@@ -62,6 +77,7 @@ The diff page highlights deletions in red and additions in green. It initially s
 
 - **Original text is auto-saved.** New inputs and edits are saved as ordinary `.json` files in the JSON file folder you choose. Incomplete or invalid JSON is also preserved as entered.
 - **Results are separate.** Copy and Export use the currently displayed formatted or extracted result; they do not replace the original input automatically.
+- **Comparison is a separate workspace.** Importing or editing JSON in JSON Compare does not modify your source files, create history entries or auto-save comparison drafts.
 - **History restores your workspace.** The history folder stores internal records, formatting options and extraction state. The import folder controls where the file picker opens.
 - **Imports avoid overwriting files.** Files imported from another folder are copied into your JSON file folder. If the folders are the same, JSON Craft works with the existing file.
 - **Deletion requires confirmation.** The dialog shows the affected file path. Confirming moves that associated file to the system Trash or Recycle Bin and removes its history entry. A separate external source file is preserved when you imported a copy.

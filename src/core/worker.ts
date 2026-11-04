@@ -1,3 +1,4 @@
+import { alignJsonKeys } from "./json/compare";
 import { processStructuredJson } from "./json/extracted-json";
 import { findKeyValues } from "./json/extract";
 import type { WorkerRequest, WorkerResponse } from "../shared/worker";
@@ -7,6 +8,14 @@ const worker = globalThis as unknown as DedicatedWorkerGlobalScope;
 
 worker.onmessage = (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
+  if (request.kind === "align-keys") {
+    worker.postMessage({
+      id: request.id,
+      kind: request.kind,
+      result: alignJsonKeys(request.left, request.right, request.indent),
+    } satisfies WorkerResponse);
+    return;
+  }
   const { id, raw, options, kind } = request;
   try {
     const response: WorkerResponse =

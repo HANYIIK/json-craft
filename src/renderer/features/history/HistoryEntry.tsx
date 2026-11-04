@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FileJson2, LoaderCircle, Pencil, Trash2 } from "lucide-react";
 import { localizeMessage, useI18n } from "../../i18n/i18n";
 import "./history-entry.css";
@@ -81,16 +81,13 @@ export function HistoryEntry({
     if (!editing) setDraft(name);
   }, [name, editing]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editing) return;
-    const frame = requestAnimationFrame(() => {
-      inputRef.current?.focus();
-      inputRef.current?.setSelectionRange(
-        0,
-        draft.replace(/\.json$/i, "").length,
-      );
-    });
-    return () => cancelAnimationFrame(frame);
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(
+      0,
+      draft.replace(/\.json$/i, "").length,
+    );
   }, [editing]);
 
   useEffect(() => {

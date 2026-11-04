@@ -1,9 +1,15 @@
+import type { KeyAlignmentResult } from "../../core/json/compare";
 import type {
   FormatOptions,
+  Indent,
   KeySearchResult,
   ProcessingResult,
 } from "../../shared/types";
 import type { WorkerRequest, WorkerResponse } from "../../shared/worker";
+
+type ClientRequest<Request> = Request extends WorkerRequest
+  ? Omit<Request, "id">
+  : never;
 
 export class FormatClient {
   private worker: Worker | undefined;
@@ -56,6 +62,17 @@ export class FormatClient {
     return this.request({ kind: "find-key", raw, key, options });
   }
 
+  alignKeys(
+    left: string,
+    right: string,
+    indent: Indent,
+  ): Promise<KeyAlignmentResult> {
+    return this.request({ kind: "align-keys", left, right, indent });
+  }
+
+  private request(
+    request: Omit<Extract<WorkerRequest, { kind: "align-keys" }>, "id">,
+  ): Promise<KeyAlignmentResult>;
   private request(
     request: Omit<Extract<WorkerRequest, { kind: "format" }>, "id">,
   ): Promise<ProcessingResult>;
@@ -63,7 +80,7 @@ export class FormatClient {
     request: Omit<Extract<WorkerRequest, { kind: "find-key" }>, "id">,
   ): Promise<KeySearchResult>;
   private request(
-    request: Omit<WorkerRequest, "id"> & { key?: string },
+    request: ClientRequest<WorkerRequest>,
   ): Promise<WorkerResponse["result"]> {
     const id = ++this.sequence;
     return new Promise((resolve, reject) => {

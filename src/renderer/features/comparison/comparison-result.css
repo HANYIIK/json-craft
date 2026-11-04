@@ -1,0 +1,29 @@
+.comparison-result {
+  flex: 1;
+}
+.comparison-result-context {
+  color: var(--text-subtle);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.comparison-result-identical {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 14px;
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .comparison-result-context {
+    flex-basis: 100%;
+  }
+  .comparison-result .repair-diff-navigation {
+    margin-left: 0;
+  }
+  .comparison-result .repair-diff-page-toolbar > .button {
+    margin-left: auto;
+  }
+}

@@ -1,0 +1,149 @@
+.comparison-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.comparison-page[hidden],
+.comparison-inputs[hidden] {
+  display: none;
+}
+.comparison-inputs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 26px 12px;
+}
+.comparison-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+.comparison-header > .ghost {
+  padding-inline: 0;
+  color: var(--muted);
+}
+.comparison-header > div {
+  flex: 1;
+  min-width: 0;
+}
+.comparison-header h1 {
+  margin: 0 0 5px;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+.comparison-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.comparison-header .primary {
+  white-space: nowrap;
+}
+.comparison-options {
+  flex-shrink: 0;
+  padding: 18px 0 14px;
+}
+.comparison-editors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+.comparison-pane-footer {
+  min-height: 47px;
+}
+.comparison-status {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.6;
+}
+.comparison-status > span {
+  overflow-wrap: anywhere;
+}
+.comparison-status.error,
+.comparison-error {
+  color: var(--error);
+}
+.comparison-status.valid {
+  color: var(--success);
+}
+.comparison-file-name {
+  padding: 0 12px 8px;
+  color: var(--text-subtle);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.comparison-error {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 0 12px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.comparison-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.comparison-note > span:last-child {
+  margin-left: auto;
+}
+.sidebar-create .comparison-entry[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+@media (max-width: 1000px) {
+  .comparison-header {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .comparison-header > .ghost {
+    order: -1;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+  .comparison-inputs {
+    padding: 16px 18px 10px;
+  }
+  .comparison-pane .editor-header {
+    padding-inline: 9px;
+  }
+  .comparison-pane .editor-header h2 {
+    gap: 5px;
+  }
+}
+@media (max-width: 680px) {
+  .comparison-inputs {
+    padding: 12px 10px 8px;
+    overflow: auto;
+  }
+  .comparison-header > div {
+    flex-basis: 100%;
+  }
+  .comparison-editors {
+    grid-template-columns: minmax(0, 1fr);
+    flex: 1 0 640px;
+  }
+  .comparison-note > span:last-child {
+    margin-left: 0;
+  }
+}

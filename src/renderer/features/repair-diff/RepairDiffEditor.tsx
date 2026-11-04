@@ -69,6 +69,7 @@ export interface RepairDiffEditorProps {
   stage: RepairStage;
   showFull?: boolean;
   wrap?: boolean;
+  labels?: { before: string; after: string };
   request?: RepairDiffEditorRequest;
   onStateChange?: (state: RepairDiffEditorState) => void;
 }
@@ -128,11 +129,11 @@ interface Instance {
   navigate(fromA: number, fromB: number, source?: "a" | "b"): void;
 }
 
-function editorAttributes(side: "a" | "b") {
+function editorAttributes(side: "a" | "b", label?: string) {
   return EditorView.contentAttributes.of({
-    "aria-label": translate(
-      side === "a" ? "修复前差异编辑器" : "修复后差异编辑器",
-    ),
+    "aria-label":
+      label ??
+      translate(side === "a" ? "修复前差异编辑器" : "修复后差异编辑器"),
     "aria-readonly": "true",
     tabindex: "0",
   });
@@ -220,7 +221,7 @@ export const RepairDiffEditor = forwardRef<
   RepairDiffEditorHandle,
   RepairDiffEditorProps
 >(function RepairDiffEditor(
-  { stage, showFull = false, wrap = true, request, onStateChange },
+  { stage, showFull = false, wrap = true, request, onStateChange, labels },
   ref,
 ) {
   const host = useRef<HTMLDivElement>(null);
@@ -229,8 +230,8 @@ export const RepairDiffEditor = forwardRef<
   onState.current = onStateChange;
   const theme = useResolvedTheme();
   const { language } = useI18n();
-  const latest = useRef({ theme, showFull, wrap, language });
-  latest.current = { theme, showFull, wrap, language };
+  const latest = useRef({ theme, showFull, wrap, language, labels });
+  latest.current = { theme, showFull, wrap, language, labels };
 
   const publish = useCallback((state: RepairDiffEditorState) => {
     if (host.current) {
@@ -486,7 +487,7 @@ export const RepairDiffEditor = forwardRef<
             ...common,
             themeA.of(colorModes[latest.current.theme]),
             wrapA.of(latest.current.wrap ? EditorView.lineWrapping : []),
-            ariaA.of(editorAttributes("a")),
+            ariaA.of(editorAttributes("a", latest.current.labels?.before)),
             localeA.of(searchPanelLanguage.of(latest.current.language)),
             panels({ topContainer: panelA }),
           ],
@@ -497,7 +498,7 @@ export const RepairDiffEditor = forwardRef<
             ...common,
             themeB.of(colorModes[latest.current.theme]),
             wrapB.of(latest.current.wrap ? EditorView.lineWrapping : []),
-            ariaB.of(editorAttributes("b")),
+            ariaB.of(editorAttributes("b", latest.current.labels?.after)),
             localeB.of(searchPanelLanguage.of(latest.current.language)),
             panels({ topContainer: panelB }),
           ],
@@ -777,7 +778,7 @@ export const RepairDiffEditor = forwardRef<
       effects: [
         themeA.reconfigure(colorModes[theme]),
         wrapA.reconfigure(wrap ? EditorView.lineWrapping : []),
-        ariaA.reconfigure(editorAttributes("a")),
+        ariaA.reconfigure(editorAttributes("a", labels?.before)),
         localeA.reconfigure(searchPanelLanguage.of(language)),
       ],
     });
@@ -785,12 +786,12 @@ export const RepairDiffEditor = forwardRef<
       effects: [
         themeB.reconfigure(colorModes[theme]),
         wrapB.reconfigure(wrap ? EditorView.lineWrapping : []),
-        ariaB.reconfigure(editorAttributes("b")),
+        ariaB.reconfigure(editorAttributes("b", labels?.after)),
         localeB.reconfigure(searchPanelLanguage.of(language)),
       ],
     });
     instance.scheduleControls();
-  }, [theme, language, wrap, stage]);
+  }, [theme, language, wrap, stage, labels?.before, labels?.after]);
 
   useLayoutEffect(() => {
     const instance = current.current;

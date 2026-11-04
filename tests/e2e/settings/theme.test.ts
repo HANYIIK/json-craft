@@ -451,6 +451,16 @@ test(
           (value) => value === raw,
           "Changing themes discarded the input undo history",
         );
+        await expectOutput(page, '{\n  "answer": 42\n}');
+        assert.equal(
+          await page
+            .getByRole("textbox", { name: "提取 key 名称", exact: true })
+            .inputValue(),
+          "payload",
+        );
+        await page
+          .getByRole("button", { name: "返回完整 JSON", exact: true })
+          .click();
         await expectOutput(page, JSON.stringify(JSON.parse(raw), null, 2));
         await page.screenshot({
           path: path.join(screenshots, "theme-light.png"),

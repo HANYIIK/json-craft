@@ -1,4 +1,10 @@
-import type { FormatOptions, KeySearchResult, ProcessingResult } from "./types";
+import type { KeyAlignmentResult } from "../core/json/compare";
+import type {
+  FormatOptions,
+  Indent,
+  KeySearchResult,
+  ProcessingResult,
+} from "./types";
 
 export interface FormatRequest {
   kind: "format";
@@ -16,7 +22,16 @@ export interface KeySearchRequest {
   options: FormatOptions;
 }
 
-export type WorkerRequest = FormatRequest | KeySearchRequest;
+export interface KeyAlignmentRequest {
+  kind: "align-keys";
+  id: number;
+  left: string;
+  right: string;
+  indent: Indent;
+}
+
+export type WorkerRequest =
+  FormatRequest | KeySearchRequest | KeyAlignmentRequest;
 
 export interface FormatResponse {
   kind: "format";
@@ -30,4 +45,11 @@ export interface KeySearchResponse {
   result: KeySearchResult;
 }
 
-export type WorkerResponse = FormatResponse | KeySearchResponse;
+export interface KeyAlignmentResponse {
+  kind: "align-keys";
+  id: number;
+  result: KeyAlignmentResult;
+}
+
+export type WorkerResponse =
+  FormatResponse | KeySearchResponse | KeyAlignmentResponse;

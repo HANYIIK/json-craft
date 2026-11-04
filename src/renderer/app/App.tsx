@@ -44,6 +44,10 @@ import {
   type EditorSelection,
 } from "../features/editor/JsonEditor";
 import { CopyButton } from "../components/CopyButton";
+import {
+  ComparisonPage,
+  type ComparisonPageHandle,
+} from "../features/comparison/ComparisonPage";
 import { DeleteConfirmation } from "../features/history/DeleteConfirmation";
 import { KeyExtractor } from "../features/extraction/KeyExtractor";
 import { HistorySync, type SaveStatus } from "../features/history/history-sync";
@@ -273,6 +277,11 @@ export function App() {
     [],
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonVisited, setComparisonVisited] = useState(false);
+  const comparisonMode = useRef(false);
+  comparisonMode.current = comparisonOpen;
+  const comparison = useRef<ComparisonPageHandle>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem("json-craft.sidebar-collapsed") === "true";
@@ -519,7 +528,10 @@ export function App() {
       )
         return;
       const copyGeneration = clipboardGeneration.current;
-      const shouldAutoCopy = allowAutoCopy && activeRef.current === doc.id;
+      const shouldAutoCopy =
+        allowAutoCopy &&
+        !comparisonMode.current &&
+        activeRef.current === doc.id;
       const automaticExtraction =
         override === undefined && Boolean(doc.autoExtract);
       let extraction =
@@ -1024,6 +1036,7 @@ export function App() {
       }));
       setDocuments((previous) => [...previous, ...added]);
       setActiveId(added[0].id);
+      setComparisonOpen(false);
       setSettingsOpen(false);
       setFocusedPane(null);
       setDiffSnapshot(undefined);
@@ -1167,6 +1180,7 @@ export function App() {
     };
     setDocuments((previous) => [...previous, doc]);
     setActiveId(doc.id);
+    setComparisonOpen(false);
     setSettingsOpen(false);
     setFocusedPane(null);
     setDiffSnapshot(undefined);
@@ -1176,6 +1190,10 @@ export function App() {
   }, [notify, flushSettings]);
 
   const formatCurrent = useCallback(() => {
+    if (comparisonMode.current) {
+      comparison.current?.compare();
+      return;
+    }
     const doc = documentsRef.current.find(
       (item) => item.id === activeRef.current,
     );
@@ -1186,6 +1204,7 @@ export function App() {
   }, [formatDocument]);
 
   const exportCurrent = useCallback(async () => {
+    if (comparisonMode.current) return;
     const doc = documentsRef.current.find(
       (item) => item.id === activeRef.current,
     );
@@ -1424,7 +1443,8 @@ export function App() {
               ...doc,
               status: "pending",
               result: undefined,
-              autoCopyRequested: doc.id === activeRef.current,
+              autoCopyRequested:
+                !comparisonMode.current && doc.id === activeRef.current,
             },
       ),
     );
@@ -1704,6 +1724,7 @@ export function App() {
   }
 
   function selectDocument(id: string) {
+    setComparisonOpen(false);
     setSettingsOpen(false);
     clipboardGeneration.current++;
     setDocuments((previous) =>
@@ -2041,10 +2062,18 @@ export function App() {
       ref={applicationRef}
       className={`application platform-${platform}`}
       data-focused-pane={
-        settingsOpen || diffSnapshot ? undefined : (focusedPane ?? undefined)
+        settingsOpen || comparisonOpen || diffSnapshot
+          ? undefined
+          : (focusedPane ?? undefined)
       }
       data-page={
-        settingsOpen ? "settings" : diffSnapshot ? "diff" : "workspace"
+        settingsOpen
+          ? "settings"
+          : comparisonOpen
+            ? "comparison"
+            : diffSnapshot
+              ? "diff"
+              : "workspace"
       }
       data-sidebar-collapsed={sidebarHidden ? "true" : undefined}
       onDragEnterCapture={(event) => {
@@ -2052,7 +2081,7 @@ export function App() {
         event.preventDefault();
         if (deletePrompt.current) return;
         dragDepth.current++;
-        setDragging(true);
+        if (!comparisonOpen || settingsOpen) setDragging(true);
       }}
       onDragOverCapture={(event) => {
         if (event.dataTransfer.types.includes("Files")) {
@@ -2074,7 +2103,18 @@ export function App() {
         if (deletePrompt.current) return;
         dragDepth.current = 0;
         setDragging(false);
-        void importBrowserFiles(event.dataTransfer.files);
+        if (comparisonOpen && !settingsOpen) {
+          const target = event.target instanceof Element ? event.target : null;
+          const side = target?.closest('[data-testid="comparison-left"]')
+            ? "left"
+            : target?.closest('[data-testid="comparison-right"]')
+              ? "right"
+              : undefined;
+          comparison.current?.importFiles(
+            Array.from(event.dataTransfer.files),
+            side,
+          );
+        } else void importBrowserFiles(event.dataTransfer.files);
       }}
     >
       <header className="titlebar">
@@ -2117,11 +2157,21 @@ export function App() {
           )}
         </div>
         <div className="titlebar-document">
-          {settingsOpen ? <Settings size={16} /> : <FileJson2 size={16} />}
+          {settingsOpen ? (
+            <Settings size={16} />
+          ) : comparisonOpen ? (
+            <Columns2 size={16} />
+          ) : (
+            <FileJson2 size={16} />
+          )}
           {settingsOpen ? (
             <span className="window-name" data-testid="active-file-name">
               {t("应用设置")}
             </span>
+          ) : comparisonOpen ? (
+            <h1 className="window-name" data-testid="active-file-name">
+              {t("JSON 对比")}
+            </h1>
           ) : (
             <h1
               className="window-name"
@@ -2180,6 +2230,25 @@ export function App() {
               <SquarePen size={16} />
               {t("新建输入")}
             </button>
+            <button
+              className="button ghost full-width comparison-entry"
+              data-testid="open-comparison"
+              disabled={!storageReady}
+              aria-current={
+                comparisonOpen && !settingsOpen ? "page" : undefined
+              }
+              onClick={() => {
+                setComparisonVisited(true);
+                setComparisonOpen(true);
+                setSettingsOpen(false);
+                setFocusedPane(null);
+                setDiffSnapshot(undefined);
+                clipboardGeneration.current++;
+              }}
+            >
+              <Columns2 size={16} />
+              {t("JSON 对比")}
+            </button>
           </div>
           <div className="file-section-header">
             <span>
@@ -2201,7 +2270,9 @@ export function App() {
                 key={doc.id}
                 id={doc.id}
                 name={doc.name}
-                selected={doc.id === activeId}
+                selected={
+                  !comparisonOpen && !settingsOpen && doc.id === activeId
+                }
                 status={
                   doc.saveState === "error"
                     ? t("保存失败")
@@ -2257,7 +2328,7 @@ export function App() {
         </aside>
         <main
           className="workspace"
-          hidden={settingsOpen || Boolean(diffSnapshot)}
+          hidden={settingsOpen || comparisonOpen || Boolean(diffSnapshot)}
         >
           <div className="workspace-filebar" data-testid="workspace-filebar">
             <span className="workspace-file-location">
@@ -3019,6 +3090,19 @@ export function App() {
             </span>
           </footer>
         </main>
+        {comparisonVisited && (
+          <ComparisonPage
+            ref={comparison}
+            hidden={!comparisonOpen || settingsOpen}
+            recursiveUnescape={settingsDraft.recursiveUnescape ?? true}
+            onRecursiveChange={(recursiveUnescape) =>
+              updatePaths({ recursiveUnescape })
+            }
+            wrap={wrap}
+            onWrapChange={() => setWrap((previous) => !previous)}
+            onClose={() => setComparisonOpen(false)}
+          />
+        )}
         {diffSnapshot && (
           <RepairDiffPage
             key={diffSnapshot.key}

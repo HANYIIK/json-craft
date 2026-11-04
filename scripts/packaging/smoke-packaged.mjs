@@ -32,6 +32,43 @@ async function poll(read, valid, message) {
   throw new Error(message);
 }
 
+async function copyEditor(page, testId) {
+  const content = page.getByTestId(testId).locator(".cm-content");
+  await content.focus();
+  await content.press("ControlOrMeta+a");
+  const copied = await content.evaluate((element) => {
+    const data = new DataTransfer();
+    element.dispatchEvent(
+      new ClipboardEvent("copy", {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: data,
+      }),
+    );
+    return data.getData("text/plain");
+  });
+  await content.press("ArrowLeft");
+  return copied;
+}
+
+async function compare(page) {
+  const button = page.getByTestId("compare-json");
+  await poll(
+    () => button.isEnabled(),
+    Boolean,
+    "Packaged comparison inputs did not finish formatting",
+  );
+  await button.click();
+  await page.getByTestId("comparison-result").waitFor();
+  const editor = page.getByTestId("repair-diff-editor");
+  await poll(
+    () => editor.getAttribute("data-difference-count"),
+    (value) => value !== null,
+    "Packaged comparison diff did not initialize",
+  );
+  return editor;
+}
+
 const root = await mkdtemp(path.join(os.tmpdir(), "json-craft-release-smoke-"));
 const profile = path.join(root, "profile");
 const files = path.join(root, "files");
@@ -162,6 +199,96 @@ try {
   );
   assert.equal(record.raw, damaged);
   assert.equal(await readFile(record.managedPath, "utf8"), damaged);
+  const historyCount = await page.evaluate(
+    async () => (await window.desktop.workspace.load()).records.length,
+  );
+  await page.getByTestId("open-comparison").click();
+  assert.equal(
+    await page.getByTestId("open-comparison").innerText(),
+    "JSON Compare",
+  );
+  const rows = Array.from({ length: 28 }, (_, id) => ({
+    id,
+    value: `item-${id}`,
+  }));
+  const left = JSON.stringify({
+    title: "Reference",
+    payload: '{"id":900719925474099312345,"name":"Release smoke"}',
+    items: ['{"enabled":true,"label":"nested"}'],
+    rows,
+    tail: true,
+  });
+  const right = {
+    tail: true,
+    rows: rows.map(({ id, value }) => ({ value, id })),
+    items: ['{"label":"nested","enabled":true}'],
+    payload: '{"name":"Release smoke","id":900719925474099312345}',
+    title: "Reference",
+  };
+  await page.getByTestId("comparison-left").locator(".cm-content").fill(left);
+  await page
+    .getByTestId("comparison-right")
+    .locator(".cm-content")
+    .fill(JSON.stringify(right));
+  const equalDiff = await compare(page);
+  assert.equal(await equalDiff.getAttribute("data-difference-count"), "0");
+  const reference = await copyEditor(page, "diff-before");
+  assert.equal(await copyEditor(page, "diff-after"), reference);
+  assert.ok(reference.includes("900719925474099312345"));
+  assert.ok(reference.includes('"payload": {'));
+  assert.ok(reference.includes('"enabled": true'));
+  await page.getByTestId("comparison-back").click();
+  right.title = "Updated";
+  right.rows[24].value = "changed";
+  right.tail = false;
+  await page
+    .getByTestId("comparison-right")
+    .locator(".cm-content")
+    .fill(JSON.stringify({ ...right, added: true }));
+  const changedDiff = await compare(page);
+  const differences = Number(
+    await changedDiff.getAttribute("data-difference-count"),
+  );
+  assert.ok(differences >= 3);
+  assert.equal(
+    await page.getByTestId("comparison-full-file").getAttribute("aria-pressed"),
+    "false",
+  );
+  assert.ok(
+    await page.getByTestId("diff-after").locator(".cm-collapsedLines").count(),
+  );
+  assert.equal(await copyEditor(page, "diff-before"), reference);
+  const alignedText = await copyEditor(page, "diff-after");
+  assert.ok(alignedText.includes("900719925474099312345"));
+  const aligned = JSON.parse(alignedText);
+  assert.deepEqual(Object.keys(aligned), [
+    "title",
+    "payload",
+    "items",
+    "rows",
+    "tail",
+    "added",
+  ]);
+  assert.deepEqual(
+    aligned.rows.map((row) => row.id),
+    rows.map((row) => row.id),
+  );
+  assert.equal(aligned.rows[24].value, "changed");
+  assert.equal(aligned.title, "Updated");
+  assert.equal(aligned.added, true);
+  await page.getByTestId("comparison-next").click();
+  await poll(
+    () => changedDiff.getAttribute("data-active-difference"),
+    (value) => value === "1",
+    "Packaged comparison did not navigate to the next difference",
+  );
+  assert.equal(
+    await page.evaluate(
+      async () => (await window.desktop.workspace.load()).records.length,
+    ),
+    historyCount,
+  );
+  assert.equal(await readFile(record.managedPath, "utf8"), damaged);
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
@@ -174,6 +301,9 @@ try {
         "key-extraction",
         "repair",
         "autosave",
+        "json-compare",
+        "key-order-alignment",
+        "comparison-context-navigation",
       ],
     }),
   );

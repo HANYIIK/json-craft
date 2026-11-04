@@ -9,7 +9,7 @@ import {
   translate,
 } from "../../../src/renderer/i18n/i18n";
 
-const catalogs = ["app", "controls", "native", "diagnostics"].map(
+const catalogs = ["app", "controls", "native", "diagnostics", "comparison"].map(
   (name) =>
     JSON.parse(
       readFileSync(

@@ -5,6 +5,7 @@ import appEnglish from "../../locales/app.en.json";
 import controlsEnglish from "../../locales/controls.en.json";
 import nativeEnglish from "../../locales/native.en.json";
 import diagnosticsEnglish from "../../locales/diagnostics.en.json";
+import comparisonEnglish from "../../locales/comparison.en.json";
 
 const cacheKey = "json-craft.language";
 const english: Record<string, string> = {
@@ -12,6 +13,7 @@ const english: Record<string, string> = {
   ...diagnosticsEnglish,
   ...appEnglish,
   ...controlsEnglish,
+  ...comparisonEnglish,
 };
 const chinese = Object.fromEntries(
   Object.keys(english).map((key) => [key, key.replace(/_(one|other)$/, "")]),
