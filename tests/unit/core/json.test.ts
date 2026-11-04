@@ -219,6 +219,37 @@ test("leaves wrapped JSON as a string when automatic unescaping is disabled", ()
   assert.equal(result.decodedLayers, 0);
 });
 
+test("does not infer JSON arrays from isolated unquoted bracketed text", () => {
+  for (const text of [
+    "[REDACTED]",
+    "[MASKED]",
+    "[hidden]",
+    "[text]",
+    "[not available]",
+    "[token-id]",
+    "[null-value]",
+    "[true-story]",
+    "[123-456]",
+    String.raw`[\x]`,
+    " [REDACTED] ",
+  ]) {
+    let raw = JSON.stringify(text);
+    for (let layer = 0; layer < 3; layer++) {
+      const result = processJson(raw, defaultOptions);
+      assert.equal(result.success, true);
+      assert.equal(result.output, raw);
+      assert.equal(result.decodedLayers, 0);
+      assert.equal(result.changeCount, 0);
+      assert.deepEqual(result.stages, []);
+      raw = JSON.stringify(raw);
+    }
+  }
+  const explicit = processJson("[REDACTED]", defaultOptions);
+  assert.equal(explicit.success, true);
+  assert.deepEqual(JSON.parse(explicit.output), ["REDACTED"]);
+  assert.ok(explicit.stages.length > 0);
+});
+
 test("reports excessive escaping explicitly rather than stopping silently", () => {
   let raw = '{"id":42}';
   for (let index = 0; index < 9; index++) raw = JSON.stringify(raw);

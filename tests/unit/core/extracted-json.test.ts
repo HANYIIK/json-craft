@@ -150,6 +150,83 @@ test("still decodes and repairs JSON beside Markdown without masking genuine fai
   assert.ok(result.stages.every((stage) => stage.path !== "$.link"));
 });
 
+test("retains bracketed placeholders in nested fields, lists and encoded JSON without repair diagnostics", () => {
+  const texts = [
+    "[REDACTED]",
+    "[MASKED]",
+    "[hidden]",
+    "[text]",
+    "[not available]",
+    "[token-id]",
+    "[null-value]",
+    "[true-story]",
+    "[123-456]",
+    String.raw`[\x]`,
+    " [REDACTED] ",
+  ];
+  const values = texts.flatMap((text) => [
+    text,
+    JSON.stringify(text),
+    JSON.stringify(JSON.stringify(text)),
+  ]);
+  const input = {
+    rows: values.map((value) => ({ value, values: [value] })),
+    metadata: {
+      id: { $oid: "0123456789abcdef01234567" },
+      created: { $date: 1234567890 },
+    },
+  };
+  for (const repair of [false, true]) {
+    const options = { ...defaultOptions, repair };
+    const unchanged = processStructuredJson(JSON.stringify(input), options);
+    assert.equal(unchanged.success, true);
+    assert.deepEqual(JSON.parse(unchanged.output), input);
+    assert.equal(unchanged.changeCount, 0);
+    assert.deepEqual(unchanged.stages, []);
+    assert.equal(unchanged.arrayDecoding, undefined);
+
+    const encoded = processStructuredJson(
+      JSON.stringify({ payload: JSON.stringify(input) }),
+      options,
+    );
+    assert.equal(encoded.success, true);
+    assert.deepEqual(JSON.parse(encoded.output), { payload: input });
+    assert.equal(encoded.arrayDecoding?.decodedItems, 1);
+    assert.equal(encoded.arrayDecoding?.failedItems, 0);
+    assert.deepEqual(encoded.arrayDecoding?.warnings, []);
+    assert.deepEqual(encoded.stages, []);
+    assert.equal(encoded.changeCount, 0);
+  }
+});
+
+test("still recognizes empty and typed JSON arrays beside ordinary bracketed text", () => {
+  const input = {
+    label: "[REDACTED]",
+    quoted: '["REDACTED"]',
+    escaped: String.raw`[\"REDACTED\"]`,
+    singleQuoted: "['already quoted']",
+    empty: "[]",
+    scalar: "[1,true,false,null]",
+    repaired: "[True,False,null,]",
+    numeric: "[1,2,]",
+  };
+  const result = process(input);
+  assert.equal(result.success, true);
+  assert.deepEqual(JSON.parse(result.output), {
+    label: input.label,
+    quoted: ["REDACTED"],
+    escaped: ["REDACTED"],
+    singleQuoted: ["already quoted"],
+    empty: [],
+    scalar: [1, true, false, null],
+    repaired: [true, false, null],
+    numeric: [1, 2],
+  });
+  assert.equal(result.arrayDecoding?.decodedItems, 7);
+  assert.equal(result.arrayDecoding?.failedItems, 0);
+  assert.ok(result.stages.every((stage) => stage.path !== "$.label"));
+});
+
 test("automatic unescaping disables all member transformations and diagnostics", () => {
   const raw = JSON.stringify(['{"id":42}', "{[}", '{"ready":true,}']);
   const options = { ...defaultOptions, autoUnescape: false };

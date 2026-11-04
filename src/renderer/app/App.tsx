@@ -65,6 +65,10 @@ import {
   getRepairSummary,
   type RepairRecordChange,
 } from "../features/repair-diff/repair-records";
+import {
+  createRepairSourceLocator,
+  type RepairSourceSelection,
+} from "../features/repair-diff/repair-source-location";
 import { getThemePreference, setThemePreference } from "../theme/theme";
 import {
   getLanguagePreference,
@@ -431,6 +435,23 @@ export function App() {
     () => collectRepairRecords(result, current.extraction?.preparation),
     [result, current.extraction?.preparation],
   );
+  const repairLocations = useMemo(() => {
+    const locations = new Map<string, RepairSourceSelection>();
+    if (!repairRecords.changes.length) return locations;
+    const locate = createRepairSourceLocator(
+      current.raw,
+      current.extraction,
+      repairRecords.stages,
+    );
+    const stages = new Map(
+      repairRecords.stages.map((stage) => [stage.id, stage]),
+    );
+    for (const change of repairRecords.changes) {
+      const location = locate(change, stages.get(change.stageId));
+      if (location) locations.set(change.id, location);
+    }
+    return locations;
+  }, [current.raw, current.extraction, repairRecords]);
   const hasOutput = current.status === "done" && result?.success === true;
   const platform = window.desktop?.platform ?? "web";
   const command = platform === "darwin" ? "⌘" : "Ctrl";
@@ -1910,33 +1931,29 @@ export function App() {
 
   function selectRepair(change: RepairRecordChange) {
     setSelectedChange({ ...change });
-    if (change.layer === 0 && change.origin === "source" && !change.path) {
-      setSelection({
-        from: change.start,
-        to: Math.max(change.start, change.end),
-        key: ++selectionCounter.current,
-      });
-      notify(
-        t("已定位原文 {{line}}:{{column}}", {
-          line: change.line,
-          column: change.column,
-        }),
-      );
-    } else {
-      openRepairDiff(change);
-      selectionCounter.current++;
-      notify(
-        t("已定位 {{target}} {{line}}:{{column}}", {
-          target: textLocation(
-            change.layer,
-            change.origin === "extracted",
-            change.path,
-          ),
-          line: change.line,
-          column: change.column,
-        }),
-      );
+    const location = repairLocations.get(change.id);
+    if (!location) {
+      notify(t("无法定位原文，请查看差异。"));
+      return;
     }
+    setSelection({
+      from: location.from,
+      to: location.to,
+      key: ++selectionCounter.current,
+    });
+    requestAnimationFrame(() =>
+      applicationRef.current
+        ?.querySelector<HTMLElement>('[data-testid="input-editor"]')
+        ?.scrollIntoView({ block: "nearest" }),
+    );
+    notify(
+      t(
+        location.exact
+          ? "已定位原文 {{line}}:{{column}}"
+          : "已定位原文字段 {{line}}:{{column}}，内部修复请查看差异。",
+        { line: location.line, column: location.column },
+      ),
+    );
   }
 
   async function copyOutput() {
@@ -2945,7 +2962,7 @@ export function App() {
                   <button
                     className="button ghost"
                     data-testid="open-repair-diff"
-                    onClick={() => openRepairDiff()}
+                    onClick={() => openRepairDiff(selectedChange)}
                   >
                     <Columns2 size={14} />
                     {t("查看差异")}
@@ -2955,70 +2972,88 @@ export function App() {
               {repairRecords.stages.length ? (
                 <>
                   <div className="repair-list">
-                    {changes.map((change, index) => (
-                      <button
-                        key={change.id}
-                        data-origin={change.origin}
-                        data-stage-id={change.stageId}
-                        data-repair-id={change.id}
-                        className={`repair-row ${selectedChange?.id === change.id ? "selected" : ""}`}
-                        onClick={() => selectRepair(change)}
-                        aria-label={t(
-                          "{{action}}，{{target}}第 {{line}} 行第 {{column}} 列",
-                          {
-                            action: t(change.label),
-                            target: textLocation(
-                              change.layer,
-                              change.origin === "extracted",
-                              change.path,
-                            ),
-                            line: change.line,
-                            column: change.column,
-                          },
-                        )}
-                      >
-                        <span className="repair-index">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="repair-name">
-                          {current.extraction && (
-                            <span className="layer-label">
-                              {t(
-                                change.origin === "source"
-                                  ? "源 JSON"
-                                  : "提取值",
-                              )}
-                              {" · "}
-                            </span>
-                          )}
-                          {change.path && (
-                            <code className="array-repair-path">
-                              {change.path}
+                    {changes.map((change, index) => {
+                      const source = repairLocations.get(change.id);
+                      return (
+                        <button
+                          key={change.id}
+                          data-origin={change.origin}
+                          data-stage-id={change.stageId}
+                          data-repair-id={change.id}
+                          data-source-line={source?.line}
+                          data-source-column={source?.column}
+                          data-location-exact={
+                            source ? String(source.exact) : undefined
+                          }
+                          className={`repair-row ${selectedChange?.id === change.id ? "selected" : ""}`}
+                          onClick={() => selectRepair(change)}
+                          title={
+                            source?.exact
+                              ? `${t("原文")} ${source.line}:${source.column}`
+                              : t("内部修复位置：{{line}}:{{column}}", {
+                                  line: change.line,
+                                  column: change.column,
+                                })
+                          }
+                          aria-label={
+                            source
+                              ? t(
+                                  "{{action}}，{{target}}第 {{line}} 行第 {{column}} 列",
+                                  {
+                                    action: t(change.label),
+                                    target: t(
+                                      source.exact ? "原文" : "原文字段",
+                                    ),
+                                    line: source.line,
+                                    column: source.column,
+                                  },
+                                )
+                              : t("无法定位原文，请查看差异。")
+                          }
+                        >
+                          <span className="repair-index">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <span className="repair-name">
+                            {current.extraction && (
+                              <span className="layer-label">
+                                {t(
+                                  change.origin === "source"
+                                    ? "源 JSON"
+                                    : "提取值",
+                                )}
+                                {" · "}
+                              </span>
+                            )}
+                            {change.path && (
+                              <code className="array-repair-path">
+                                {change.path}
+                              </code>
+                            )}
+                            {change.layer > 0 && (
+                              <span className="layer-label">
+                                {t("解码 {{count}} 层 · ", {
+                                  count: change.layer,
+                                })}
+                              </span>
+                            )}
+                            {t(change.label)}
+                          </span>
+                          <span className="change-snippet">
+                            <code className="removed" title={change.before}>
+                              {snippet(change.before)}
                             </code>
-                          )}
-                          {change.layer > 0 && (
-                            <span className="layer-label">
-                              {t("解码 {{count}} 层 · ", {
-                                count: change.layer,
-                              })}
-                            </span>
-                          )}
-                          {t(change.label)}
-                        </span>
-                        <span className="change-snippet">
-                          <code className="removed" title={change.before}>
-                            {snippet(change.before)}
-                          </code>
-                          <ArrowRight size={11} />
-                          <code className="added" title={change.after}>
-                            {snippet(change.after)}
-                          </code>
-                        </span>
-                        <span className="repair-position">
-                          {change.line}:{change.column}
-                        </span>
-                      </button>
-                    ))}
+                            <ArrowRight size={11} />
+                            <code className="added" title={change.after}>
+                              {snippet(change.after)}
+                            </code>
+                          </span>
+                          <span className="repair-position">
+                            {source ? `${source.line}:${source.column}` : "—"}
+                          </span>
+                        </button>
+                      );
+                    })}
                     {repairRecords.changeCount === null && (
                       <div className="diff-note">
                         <CircleAlert size={14} />
@@ -3030,13 +3065,9 @@ export function App() {
                   </div>
                   <p className="record-note">
                     <span>
-                      {current.extraction
-                        ? t(
-                            "位置分别对应源 JSON 或提取值的解码层；点击记录可定位或查看差异。",
-                          )
-                        : t(
-                            "位置为对应文本的行:列；点击记录可定位，请核对修复是否符合原意。",
-                          )}
+                      {t(
+                        "位置为原文行:列；点击定位原文，解码后的修复定位到所属字符串，内部修改可查看差异。",
+                      )}
                     </span>
                     {Boolean(result?.decodedLayers) && (
                       <span>

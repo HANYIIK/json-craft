@@ -316,6 +316,16 @@ test(
           .getByTestId("processing-records")
           .locator('.repair-row[data-origin="extracted"]')
           .click();
+        assert.equal(
+          await page.locator(".application").getAttribute("data-page"),
+          "workspace",
+        );
+        await poll(
+          () => page.evaluate(() => getSelection()?.toString()),
+          (text) => text === JSON.stringify(value),
+          "An extracted repair did not select its original source string",
+        );
+        await page.getByTestId("open-repair-diff").click();
         await expectDiff(page, value, '{"inner":1}', "extracted");
         await leaveDiff(page);
         await close();

@@ -299,27 +299,34 @@ function hasStructuredEnvelope(text: string): boolean {
     /(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)\b/iy;
   let quote = "";
   let unquoted = false;
+  let structuredContent = false;
   for (let offset = 0; offset < text.length; offset++) {
     const char = text[offset];
-    if (char === "\\") offset++;
-    else if (quote) {
+    if (char === "\\") {
+      if (!quote) unquoted = true;
+      offset++;
+    } else if (quote) {
       if (char === quote) quote = "";
     } else if (/\s/.test(char)) continue;
-    else if (!unquoted && (char === '"' || char === "'" || char === "`"))
+    else if (!unquoted && (char === '"' || char === "'" || char === "`")) {
+      structuredContent = true;
       quote = char;
-    else if (
+    } else if (
       !unquoted &&
       ((text.startsWith("//", offset) && text.indexOf("\n", offset + 2) >= 0) ||
         (text.startsWith("/*", offset) && text.indexOf("*/", offset + 2) >= 0))
     ) {
       offset = skipJsonTrivia(text, offset) - 1;
     } else if (char === "{" || char === "[") {
+      if (frames.length) structuredContent = true;
       frames.push(char === "{" ? "key" : "array");
       unquoted = false;
     } else if (char === "}" || char === "]") {
+      if (!unquoted) structuredContent = true;
       frames.pop();
       unquoted = false;
       if (!frames.length) {
+        if (!structuredContent) return false;
         let next = skipJsonTrivia(text, offset + 1);
         if (next === text.length) return true;
         if (text[next] === ",") {
@@ -334,20 +341,31 @@ function hasStructuredEnvelope(text: string): boolean {
         );
       }
     } else if (char === ",") {
+      structuredContent = true;
       if (frames[frames.length - 1] === "value")
         frames[frames.length - 1] = "key";
       unquoted = false;
     } else if (char === ":" && frames[frames.length - 1] === "key") {
+      structuredContent = true;
       frames[frames.length - 1] = "value";
       unquoted = false;
     } else if (!unquoted && frames[frames.length - 1] !== "key") {
       scalar.lastIndex = offset;
       const token = scalar.exec(text);
-      if (token) offset += token[0].length - 1;
-      else unquoted = true;
+      const end = offset + (token?.[0].length ?? 0);
+      if (
+        token &&
+        (end === text.length ||
+          /[\s,\]}]/.test(text[end]) ||
+          text.startsWith("//", end) ||
+          text.startsWith("/*", end))
+      ) {
+        structuredContent = true;
+        offset += token[0].length - 1;
+      } else unquoted = true;
     } else unquoted = true;
   }
-  return true;
+  return structuredContent || (!unquoted && frames.length > 0);
 }
 
 export function wrapsStructuredJson(value: string): boolean {

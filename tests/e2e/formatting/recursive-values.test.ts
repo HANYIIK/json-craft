@@ -206,6 +206,16 @@ test(
           .filter({ hasText: "$.repaired" })
           .first();
         await repair.click();
+        assert.equal(
+          await page.locator(".application").getAttribute("data-page"),
+          "workspace",
+        );
+        await poll(
+          () => page.evaluate(() => getSelection()?.toString()),
+          (value) => value === JSON.stringify(source.payload.repaired),
+          "The recursive repair did not select its original source field",
+        );
+        await page.getByTestId("open-repair-diff").click();
         await page.getByTestId("repair-diff-editor").waitFor();
         assert.equal(
           await page.locator(".application").getAttribute("data-page"),
@@ -269,6 +279,7 @@ test(
           "The screenshot theme did not apply",
         );
         await repair.click();
+        await page.getByTestId("open-repair-diff").click();
         await page.getByTestId("repair-diff-editor").waitFor();
         await page.screenshot({
           path: path.join(

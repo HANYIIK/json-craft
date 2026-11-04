@@ -228,5 +228,10 @@
   "取消": "Cancel",
   "删除文件": "Delete file",
   "删除记录": "Delete entry",
-  "已删除记录及关联文件": "History entry and linked file deleted"
+  "已删除记录及关联文件": "History entry and linked file deleted",
+  "原文字段": "Source field",
+  "内部修复位置：{{line}}:{{column}}": "Repair within decoded text: {{line}}:{{column}}",
+  "无法定位原文，请查看差异。": "Could not locate the original text. Use View diff.",
+  "已定位原文字段 {{line}}:{{column}}，内部修复请查看差异。": "Located source field at {{line}}:{{column}}. Use View diff for edits within decoded text.",
+  "位置为原文行:列；点击定位原文，解码后的修复定位到所属字符串，内部修改可查看差异。": "Positions are source line:column. Click to locate the original text; decoded repairs select their containing string. Use View diff to inspect the changes inside."
 }

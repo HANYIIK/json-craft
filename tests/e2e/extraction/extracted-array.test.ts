@@ -215,6 +215,16 @@ test(
           .first();
         await row.waitFor();
         await row.click();
+        assert.equal(
+          await page.locator(".application").getAttribute("data-page"),
+          "workspace",
+        );
+        await poll(
+          () => page.evaluate(() => getSelection()?.toString()),
+          (value) => value === JSON.stringify(members[4]),
+          "The repaired array item did not select its original source string",
+        );
+        await page.getByTestId("open-repair-diff").click();
         await page.getByTestId("repair-diff-editor").waitFor();
         assert.equal(
           await page.locator(".application").getAttribute("data-page"),
@@ -280,6 +290,7 @@ test(
             ),
           });
           await row.click();
+          await page.getByTestId("open-repair-diff").click();
           await page.getByTestId("repair-diff-editor").waitFor();
           await page.screenshot({
             path: path.join(artifacts, `extracted-array-${variant}-repair.png`),
