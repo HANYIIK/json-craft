@@ -1,4 +1,4 @@
-# JSON Craft
+# JSON Craft — Offline JSON Formatter, Repair & Diff
 
 Make messy JSON readable. Make differences clear.
 
