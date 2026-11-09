@@ -1,4 +1,4 @@
-# JSON Craft
+# JSON Craft — 离线 JSON 格式化、修复与对比工具
 
 让杂乱的 JSON 清晰可读，让差异一目了然。
 
