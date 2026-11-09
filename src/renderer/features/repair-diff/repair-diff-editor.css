@@ -36,6 +36,23 @@
   pointer-events: auto;
 }
 
+.repair-diff-panels .cm-panels-bottom:has(> .cm-goto-line) {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: auto;
+  max-width: calc(100% - 24px);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  box-shadow: 0 6px 20px #0002;
+}
+
+.repair-diff-panels .cm-goto-line {
+  padding: 10px 28px 10px 12px;
+  font-size: 12px;
+}
+
 .repair-diff-editor > .cm-mergeView {
   height: 100%;
   overflow: auto;
@@ -69,6 +86,10 @@
   scrollbar-color: var(--scrollbar) transparent;
 }
 
+.repair-diff-editor[data-projected="true"] .cm-scroller {
+  line-height: 24px;
+}
+
 .repair-diff-editor .cm-content {
   padding: 12px 0;
   caret-color: var(--editor-cursor);
@@ -76,6 +97,22 @@
 
 .repair-diff-editor .cm-line {
   padding: 0 10px;
+}
+
+.repair-diff-editor .cm-projected-json-key {
+  color: var(--syntax-key);
+}
+
+.repair-diff-editor .cm-projected-json-string {
+  color: var(--syntax-string);
+}
+
+.repair-diff-editor .cm-projected-json-number {
+  color: var(--syntax-number);
+}
+
+.repair-diff-editor .cm-projected-json-punctuation {
+  color: var(--syntax-punctuation);
 }
 
 .repair-diff-editor .cm-gutters {

@@ -29,10 +29,10 @@ Get the installer for your operating system and processor from [Releases](https:
 
 | Platform                             | Installer                                                                                                                    | Alternative                                                                                            |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| macOS 13+ · Apple Silicon (M-series) | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-arm64.dmg)         | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-arm64.zip) |
-| macOS 13+ · Intel                    | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-x64.dmg)                   | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-macOS-x64.zip)   |
-| Windows · x64                        | [Windows x64 installer](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-Windows-x64.exe)     | —                                                                                                      |
-| Windows · ARM64                      | [Windows ARM64 installer](https://github.com/HANYIIK/json-craft/releases/download/v0.2.0/JSON-Craft-0.2.0-Windows-arm64.exe) | —                                                                                                      |
+| macOS 13+ · Apple Silicon (M-series) | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-arm64.dmg)         | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-arm64.zip) |
+| macOS 13+ · Intel                    | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-x64.dmg)                   | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-x64.zip)   |
+| Windows · x64                        | [Windows x64 installer](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-Windows-x64.exe)     | —                                                                                                      |
+| Windows · ARM64                      | [Windows ARM64 installer](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-Windows-arm64.exe) | —                                                                                                      |
 
 **macOS:** Open the DMG and drag JSON Craft into Applications, or unzip the ZIP and move the app into Applications. This release uses an ad-hoc signature and is **not notarized by Apple**. If macOS blocks the first launch, review the message in **System Settings → Privacy & Security → Open Anyway** and approve only the copy you downloaded from this repository. See [Apple's first-open guidance](https://support.apple.com/en-us/102445).
 
@@ -84,9 +84,9 @@ The diff page highlights deletions in red and additions in green. It initially s
 
 Repair can infer missing content, so review the changes before relying on repaired data. Ordinary formatting preserves number literals, duplicate keys and valid escapes; recursive unescaping intentionally turns embedded JSON strings into structured values when enabled.
 
-### Current limitation
+### Large JSON files
 
-Extremely long, heavily escaped JSON string lines can still display incompletely in the diff view. The underlying JSON and full Copy/Export output are preserved.
+Files up to 20 MiB are supported. The diff view renders long escaped strings as virtual display rows while preserving original content, line numbers, search, Copy and Export. If wrapping would exceed the browser's safe rendering height, it automatically switches to bounded sections with horizontal scrolling and shows a notice.
 
 ## Feedback
 

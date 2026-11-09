@@ -208,6 +208,7 @@
   "修复后": "After repair",
   "当前没有可查看的修复差异。": "There are no repair differences to display.",
   "红色表示删除，绿色表示新增；点击隐藏行可展开相邻内容。": "Red marks deletions; green marks additions. Expand hidden lines to see more context.",
+  "内容较长，已分段显示，可横向滚动查看完整内容。": "Long content is shown in sections. Scroll horizontally to see every character.",
   "修复前差异编辑器": "Before repair diff editor",
   "修复后差异编辑器": "After repair diff editor",
   "展开 {{count}} 行未变更内容": "Expand {{count}} unchanged lines",

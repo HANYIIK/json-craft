@@ -6,17 +6,29 @@ import { processJson } from "../../../src/core/json/json";
 import { defaultOptions, type RepairStage } from "../../../src/shared/types";
 import {
   nativeRepairChanges,
-  longJsonLines,
-  precedingLongLine,
-  intersectLineGaps,
-  matchedLongJsonLines,
-  pairedDiffPosition,
+  mapProjectedChunks,
+  repairChunkRange,
   unchangedDiffRange,
   repairChangeChunk,
   repairDifferenceIndex,
   repairDiffLineCounts,
+  alignedDiffRows,
   validatedRepairChanges,
 } from "../../../src/renderer/features/repair-diff/repair-diff-model";
+import { projectDiffTexts } from "../../../src/renderer/features/repair-diff/diff-text-projection";
+
+test("budgets the combined aligned height of insertions on opposite sides", () => {
+  const common = Array.from(
+    { length: 12 },
+    (_, index) => `common unchanged row ${index}`,
+  );
+  const before = Text.of(["start", "left-1", "left-2", ...common, "tail"]);
+  const after = Text.of(["start", ...common, "right-1", "right-2", "tail"]);
+  const chunks = Chunk.build(before, after);
+  assert.equal(chunks.length, 2);
+  assert.equal(alignedDiffRows(chunks, before, after), before.lines + 2);
+  assert.equal(alignedDiffRows([], before, before), before.lines);
+});
 
 function stage(
   before: string,
@@ -205,153 +217,149 @@ test("maps change navigation to chunks and accepts the last-item request", () =>
   assert.equal(repairChangeChunk([], changes[0]), -1);
 });
 
-test("indexes long logical lines and finds the preceding measurement anchor", () => {
-  const doc = Text.of([
-    "short",
-    "中".repeat(10_000),
-    "tail",
-    "x".repeat(20_000),
-    "last",
+test("separate projected hunks map to exact source edits within one giant logical line", () => {
+  const before = JSON.stringify({ payload: "x ".repeat(12_000) });
+  const first = before.indexOf("x ");
+  const input = stage(before, [
+    { start: first + 1_000, end: first + 1_001, after: "A" },
+    { start: first + 18_000, end: first + 18_001, after: "B" },
   ]);
-  const lines = longJsonLines(doc);
-  assert.deepEqual(lines, [
-    { from: 6, to: 10_006 },
-    { from: 10_012, to: 30_012 },
-  ]);
-  assert.equal(precedingLongLine(lines, 0), undefined);
-  assert.equal(precedingLongLine(lines, 10_005), undefined);
-  assert.equal(precedingLongLine(lines, 10_006), lines[0]);
-  assert.equal(precedingLongLine(lines, 15_000), lines[0]);
-  assert.equal(precedingLongLine(lines, doc.length), lines[1]);
-});
-
-test("shares only mutually hidden ranges while preserving either side's visible targets", () => {
-  const gap = (from: number, to: number, density: number) => ({
-    from,
-    to,
-    size: (to - from) * density,
-    displaySize: (to - from) * density,
+  const exact = validatedRepairChanges(input)!;
+  const sourceA = Text.of(input.before.split("\n"));
+  const sourceB = Text.of(input.after.split("\n"));
+  const sourceChunks = Chunk.build(sourceA, sourceB, {
+    override: () => nativeRepairChanges(exact),
   });
-  const a = [gap(0, 100, 2), gap(120, 200, 2)];
-  const b = [gap(0, 140, 4), gap(160, 200, 4)];
-  assert.deepEqual(intersectLineGaps(a, b), [
-    gap(0, 100, 2),
-    gap(120, 140, 2),
-    gap(160, 200, 2),
-  ]);
-  assert.deepEqual(intersectLineGaps(a, []), []);
-  assert.deepEqual(intersectLineGaps(a, a), a);
-  const shared = intersectLineGaps(
-    [gap(0, 20, 1), gap(40, 100, 1)],
-    [gap(0, 60, 9), gap(80, 100, 9)],
+  assert.equal(sourceChunks.length, 1);
+  const originalChunks = JSON.stringify(sourceChunks);
+  const projected = projectDiffTexts(
+    input.before,
+    input.after,
+    nativeRepairChanges(exact),
+    true,
+    {
+      width: 80,
+      measure: (text) => text.length,
+    },
   );
-  assert.equal(
-    shared.some((range) => range.from < 30 && range.to > 30),
-    false,
+  const displayChunks = Chunk.build(projected.a.doc, projected.b.doc, {
+    override: () => projected.changes,
+  });
+  assert.equal(displayChunks.length, 2);
+  const originalDisplay = JSON.stringify(displayChunks);
+  const mapped = mapProjectedChunks(displayChunks, projected.a, projected.b);
+  assert.deepEqual(
+    mapped.map(repairChunkRange),
+    exact.map(({ fromA, toA, fromB, toB }) => ({ fromA, toA, fromB, toB })),
   );
-  assert.equal(
-    shared.some((range) => range.from < 70 && range.to > 70),
-    false,
+  for (let index = 0; index < mapped.length; index++) {
+    const original = displayChunks[index];
+    const chunk = mapped[index];
+    assert.equal(chunk.fromA, projected.a.toSource(original.fromA));
+    assert.equal(chunk.endA, projected.a.toSource(original.endA));
+    assert.equal(chunk.fromB, projected.b.toSource(original.fromB));
+    assert.equal(chunk.endB, projected.b.toSource(original.endB));
+    assert.equal(chunk.precise, original.precise);
+    assert.ok(repairChunkRange(chunk).toA - repairChunkRange(chunk).fromA < 80);
+  }
+  assert.deepEqual(
+    exact.map((change) => repairChangeChunk(mapped, change)),
+    [0, 1],
   );
+  assert.deepEqual(repairDiffLineCounts(sourceChunks, sourceA, sourceB), {
+    addedLines: 1,
+    removedLines: 1,
+  });
+  assert.equal(JSON.stringify(sourceChunks), originalChunks);
+  assert.equal(JSON.stringify(displayChunks), originalDisplay);
+  assert.equal(projected.a.source, input.before);
+  assert.equal(projected.b.source, input.after);
 });
 
-test("pairs repeated unchanged long-line occurrences by chunk offsets rather than text identity", () => {
-  const long = "x".repeat(20_001);
-  const before = Text.of(["old", long, "middle", long, "tail"]);
-  const after = Text.of(["new-prefix", long, "middle", long, "tail"]);
-  const chunks = Chunk.build(before, after);
-  const pairs = matchedLongJsonLines(before, after, chunks);
-  assert.equal(pairs.length, 2);
-  assert.equal(pairs[0].fromA, 4);
-  assert.equal(pairs[0].fromB, 11);
-  assert.equal(
-    pairs[1].fromA - pairs[0].fromA,
-    pairs[1].fromB - pairs[0].fromB,
-  );
-  const changed = Text.of([
-    "new-prefix",
-    long.replace("xxx", "YYY"),
-    "middle",
-    long,
-    "tail",
-  ]);
-  assert.equal(
-    matchedLongJsonLines(before, changed, Chunk.build(before, changed)).length,
-    1,
-  );
-});
-
-test("maps real unchanged character anchors through separate insertion and deletion chunks", () => {
-  const first = Array.from({ length: 8 }, (_, index) => `unchanged-a${index}`);
-  const second = Array.from({ length: 8 }, (_, index) => `unchanged-b${index}`);
-  const before = Text.of([
-    "header",
-    ...first,
-    "remove-one",
-    "remove-two",
-    ...second,
-    "尾部😀",
-  ]);
-  const after = Text.of([
-    "header",
-    "insert-extra-long",
-    "insert-two",
-    ...first,
-    ...second,
-    "尾部😀",
-  ]);
-  const chunks = Chunk.build(before, after);
-  assert.equal(chunks.length, 2);
-  for (const value of [
-    "header",
-    first[0],
-    first[7],
-    second[0],
-    second[7],
-    "尾部😀",
+test("mapped chunk boundaries preserve empty sides, end sentinels and precise flags", () => {
+  for (const [before, after] of [
+    ["", "x".repeat(10_000)],
+    ["x".repeat(10_000), ""],
+    ["x", "xy\n"],
+    ["x\n", "x"],
   ]) {
-    const a = before.toString().indexOf(value);
-    const b = after.toString().indexOf(value);
-    for (const offset of [0, 1, value.length - 1]) {
-      assert.equal(pairedDiffPosition(chunks, a + offset, true), b + offset);
-      assert.equal(pairedDiffPosition(chunks, b + offset, false), a + offset);
+    const sourceA = Text.of(before.split("\n"));
+    const sourceB = Text.of(after.split("\n"));
+    const original = Chunk.build(sourceA, sourceB);
+    const changes = original.flatMap((chunk) =>
+      chunk.changes.map((change) => ({
+        ...change,
+        id: "test",
+        fromA: chunk.fromA + change.fromA,
+        toA: chunk.fromA + change.toA,
+        fromB: chunk.fromB + change.fromB,
+        toB: chunk.fromB + change.toB,
+      })),
+    );
+    const projected = projectDiffTexts(
+      before,
+      after,
+      nativeRepairChanges(changes),
+    );
+    const display = Chunk.build(projected.a.doc, projected.b.doc, {
+      override: () => projected.changes,
+    }).map(
+      (chunk) =>
+        new Chunk(
+          chunk.changes,
+          chunk.fromA,
+          chunk.toA,
+          chunk.fromB,
+          chunk.toB,
+          false,
+        ),
+    );
+    const mapped = mapProjectedChunks(display, projected.a, projected.b);
+    assert.ok(mapped.every((chunk) => chunk.precise === false));
+    for (let index = 0; index < display.length; index++) {
+      const chunk = display[index];
+      const mappedChunk = mapped[index];
+      assert.equal(
+        mappedChunk.fromA === mappedChunk.toA,
+        chunk.fromA === chunk.toA,
+      );
+      assert.equal(
+        mappedChunk.fromB === mappedChunk.toB,
+        chunk.fromB === chunk.toB,
+      );
+      assert.equal(mappedChunk.endA, projected.a.toSource(chunk.endA));
+      assert.equal(mappedChunk.endB, projected.b.toSource(chunk.endB));
     }
   }
-  assert.equal(pairedDiffPosition(chunks, before.length, true), after.length);
-  assert.equal(pairedDiffPosition(chunks, after.length, false), before.length);
 });
 
-test("maps inserted and deleted ranges to their counterpart boundary without overshooting", () => {
-  const unchanged = Array.from({ length: 8 }, (_, index) => `shared-${index}`);
-  const before = Text.of([
-    "head",
-    ...unchanged,
-    "deleted-one",
-    "deleted-two",
-    "tail",
-  ]);
-  const after = Text.of([
-    "head",
-    "added-one",
-    "added-two",
-    ...unchanged,
-    "tail",
-  ]);
-  const chunks = Chunk.build(before, after);
-  const inserted = chunks.find((chunk) => chunk.fromA === chunk.toA);
-  const deleted = chunks.find((chunk) => chunk.fromB === chunk.toB);
-  assert.ok(inserted);
-  assert.ok(deleted);
-  for (const position of [inserted.fromB, inserted.fromB + 3, inserted.toB - 1])
-    assert.equal(pairedDiffPosition(chunks, position, false), inserted.fromA);
-  assert.equal(pairedDiffPosition(chunks, inserted.toA, true), inserted.toB);
-  assert.equal(pairedDiffPosition(chunks, inserted.toB, false), inserted.toA);
-  for (const position of [deleted.fromA, deleted.fromA + 3, deleted.toA - 1])
-    assert.equal(pairedDiffPosition(chunks, position, true), deleted.fromB);
-  assert.equal(pairedDiffPosition(chunks, deleted.toA, true), deleted.toB);
-  assert.equal(pairedDiffPosition(chunks, deleted.toB, false), deleted.toA);
-  assert.equal(pairedDiffPosition([], 42, true), 42);
-  assert.equal(pairedDiffPosition([], 42, false), 42);
+test("actual chunk ranges use the first and last relative change or empty fallback", () => {
+  const input = stage("a\nb\nc\nd", [{ start: 2, end: 3, after: "new" }]);
+  const exact = validatedRepairChanges(input)!;
+  const native = Chunk.build(
+    Text.of(input.before.split("\n")),
+    Text.of(input.after.split("\n")),
+    { override: () => nativeRepairChanges(exact) },
+  );
+  const identity = projectDiffTexts(
+    input.before,
+    input.after,
+    nativeRepairChanges(exact),
+    false,
+  );
+  assert.equal(mapProjectedChunks(native, identity.a, identity.b), native);
+  assert.deepEqual(repairChunkRange(new Chunk([], 3, 8, 10, 10, false)), {
+    fromA: 3,
+    toA: 7,
+    fromB: 10,
+    toB: 10,
+  });
+  assert.deepEqual(repairChunkRange(native[0]), {
+    fromA: 2,
+    toA: 3,
+    fromB: 2,
+    toB: 5,
+  });
 });
 
 test("maps UTF-16 unchanged ranges on the correct side of insertion and deletion boundaries", () => {

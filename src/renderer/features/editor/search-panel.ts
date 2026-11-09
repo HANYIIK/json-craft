@@ -5,20 +5,25 @@ import {
   findNext,
   findPrevious,
   getSearchQuery,
+  gotoLine,
+  openSearchPanel,
   replaceAll,
   replaceNext,
   search,
   selectMatches,
+  selectNextOccurrence,
+  selectSelectionMatches,
   setSearchQuery,
 } from "@codemirror/search";
 import {
   EditorView,
+  keymap,
   runScopeHandlers,
   type Command,
   type Panel,
   type ViewUpdate,
 } from "@codemirror/view";
-import { EditorState, Facet } from "@codemirror/state";
+import { EditorState, Facet, Prec } from "@codemirror/state";
 import { translate } from "../../i18n/i18n";
 
 export const searchPanelLanguage = Facet.define<"zh-CN" | "en", "zh-CN" | "en">(
@@ -26,6 +31,58 @@ export const searchPanelLanguage = Facet.define<"zh-CN" | "en", "zh-CN" | "en">(
     combine: (values) => values[0] ?? "zh-CN",
   },
 );
+
+export interface SearchAdapter {
+  query(query: SearchQuery): SearchQuery;
+  getCursor(
+    view: EditorView,
+    query: SearchQuery,
+  ): Iterator<{ from: number; to: number }>;
+  progress?(
+    view: EditorView,
+    query: SearchQuery,
+  ): { count: number; ordinal: number; complete: boolean };
+  open: Command;
+  next: Command;
+  previous: Command;
+  all: Command;
+  nextOccurrence?: Command;
+  selectionMatches?: Command;
+  goto?: Command;
+}
+
+export const searchAdapter = Facet.define<
+  SearchAdapter,
+  SearchAdapter | undefined
+>({
+  combine: (values) => values[0],
+});
+
+const nativeSearch = {
+  open: openSearchPanel,
+  next: findNext,
+  previous: findPrevious,
+  all: selectMatches,
+  nextOccurrence: selectNextOccurrence,
+  selectionMatches: selectSelectionMatches,
+  goto: gotoLine,
+};
+
+export const jsonSearchCommands = Object.fromEntries(
+  Object.entries(nativeSearch).map(([name, command]) => [
+    name,
+    (view: EditorView) => {
+      const adapter = view.state.facet(searchAdapter);
+      const adapted = adapter?.[name as keyof typeof nativeSearch];
+      return adapted ? adapted(view) : command(view);
+    },
+  ]),
+) as Record<keyof typeof nativeSearch, Command>;
+
+function queryFor(view: EditorView) {
+  const query = getSearchQuery(view.state);
+  return view.state.facet(searchAdapter)?.query(query) ?? query;
+}
 
 const numberFormatters = {
   "zh-CN": new Intl.NumberFormat("zh-CN"),
@@ -87,14 +144,14 @@ class JsonSearchPanel implements Panel {
   private localizers: (() => void)[] = [];
   private replacement?: HTMLElement;
   private replaceToggle?: HTMLButtonElement;
-  private matches = new MatchIndex();
+  private matches?: MatchIndex;
   private counting = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private view: EditorView) {
     const document = view.dom.ownerDocument;
     const phrase = (key: string) => view.state.phrase(key);
-    this.query = getSearchQuery(view.state);
+    this.query = queryFor(view);
     const field = (name: string, label: string, checkbox = false) => {
       const input = document.createElement("input");
       input.name = name;
@@ -152,9 +209,9 @@ class JsonSearchPanel implements Panel {
     this.dom.className = "cm-search";
     this.dom.append(
       find,
-      button("next", "next", findNext),
-      button("prev", "previous", findPrevious),
-      button("select", "all", selectMatches),
+      button("next", "next", jsonSearchCommands.next),
+      button("prev", "previous", jsonSearchCommands.previous),
+      button("select", "all", jsonSearchCommands.all),
       option(this.caseField, "match case"),
       option(this.regexpField, "regexp"),
       option(this.wordField, "by word"),
@@ -217,7 +274,9 @@ class JsonSearchPanel implements Panel {
       else if (event.key === "Enter" && !event.isComposing) {
         if (event.target === this.searchField) {
           event.preventDefault();
-          (event.shiftKey ? findPrevious : findNext)(view);
+          (event.shiftKey
+            ? jsonSearchCommands.previous
+            : jsonSearchCommands.next)(view);
         } else if (event.target === this.replaceField) {
           event.preventDefault();
           replaceNext(view);
@@ -274,11 +333,20 @@ class JsonSearchPanel implements Panel {
 
   private recount() {
     clearTimeout(this.timer);
+    this.timer = undefined;
+    const adapter = this.view.state.facet(searchAdapter);
+    if (adapter?.progress) {
+      this.matches = undefined;
+      this.renderCount();
+      return;
+    }
     this.matches = new MatchIndex();
     this.counting = this.query.valid;
     this.renderCount();
     if (!this.counting) return;
-    const cursor = this.query.getCursor(this.view.state);
+    const cursor = adapter
+      ? adapter.getCursor(this.view, this.query)
+      : this.query.getCursor(this.view.state);
     const index = this.matches;
     const scan = () => {
       const start = performance.now();
@@ -304,20 +372,24 @@ class JsonSearchPanel implements Panel {
 
   private renderCount() {
     const { from, to } = this.view.state.selection.main;
-    const ordinal = this.matches.ordinal(from, to);
+    const progress = this.view.state
+      .facet(searchAdapter)
+      ?.progress?.(this.view, this.query);
+    const ordinal = progress?.ordinal ?? this.matches?.ordinal(from, to) ?? 0;
+    const size = progress?.count ?? this.matches?.size ?? 0;
+    if (progress) this.counting = this.query.valid && !progress.complete;
     const invalid = Boolean(this.query.search) && !this.query.valid;
     const formatter =
       numberFormatters[this.view.state.facet(searchPanelLanguage)];
     const current = formatter.format(ordinal);
-    const total = formatter.format(this.matches.size);
-    this.count.textContent = this.counting
-      ? translate("统计中…")
-      : `${current} / ${total}`;
+    const total = formatter.format(size);
+    const text = this.counting ? translate("统计中…") : `${current} / ${total}`;
+    if (this.count.textContent !== text) this.count.textContent = text;
     this.count.title = this.counting
       ? translate("正在统计全文匹配")
       : invalid
         ? translate("正则表达式无效")
-        : this.query.search && this.matches.size === 0
+        : this.query.search && size === 0
           ? translate("未找到匹配项")
           : ordinal
             ? translate("当前第 {{current}} 个，共 {{total}} 处匹配", {
@@ -328,12 +400,12 @@ class JsonSearchPanel implements Panel {
     this.count.setAttribute("aria-busy", String(this.counting));
     this.count.classList.toggle(
       "cm-search-count-empty",
-      Boolean(this.query.search) && !this.counting && this.matches.size === 0,
+      Boolean(this.query.search) && !this.counting && size === 0,
     );
   }
 
   update(update: ViewUpdate) {
-    const query = getSearchQuery(update.state);
+    const query = queryFor(this.view);
     const changed = !sameSearch(query, this.query);
     this.query = query;
     this.syncFields();
@@ -345,7 +417,11 @@ class JsonSearchPanel implements Panel {
     )
       this.localize();
     if (update.docChanged || changed) this.recount();
-    else if (update.selectionSet) this.renderCount();
+    else if (
+      update.selectionSet ||
+      this.view.state.facet(searchAdapter)?.progress
+    )
+      this.renderCount();
   }
 
   mount() {
@@ -357,7 +433,32 @@ class JsonSearchPanel implements Panel {
   }
 }
 
-export const jsonSearch = search({
-  top: true,
-  createPanel: (view) => new JsonSearchPanel(view),
-});
+export const jsonSearch = [
+  search({ top: true, createPanel: (view) => new JsonSearchPanel(view) }),
+  Prec.high(
+    keymap.of([
+      {
+        key: "Mod-f",
+        run: jsonSearchCommands.open,
+        scope: "editor search-panel",
+      },
+      {
+        key: "F3",
+        run: jsonSearchCommands.next,
+        shift: jsonSearchCommands.previous,
+        scope: "editor search-panel",
+        preventDefault: true,
+      },
+      {
+        key: "Mod-g",
+        run: jsonSearchCommands.next,
+        shift: jsonSearchCommands.previous,
+        scope: "editor search-panel",
+        preventDefault: true,
+      },
+      { key: "Mod-d", run: jsonSearchCommands.nextOccurrence },
+      { key: "Mod-Shift-l", run: jsonSearchCommands.selectionMatches },
+      { key: "Mod-Alt-g", run: jsonSearchCommands.goto },
+    ]),
+  ),
+];

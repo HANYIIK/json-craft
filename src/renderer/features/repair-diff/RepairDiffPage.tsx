@@ -317,8 +317,12 @@ export function RepairDiffPage({ snapshot, hidden, onClose }: Props) {
           )}
         </div>
       </div>
-      <p className="repair-diff-page-note">
-        {t("红色表示删除，绿色表示新增；点击隐藏行可展开相邻内容。")}
+      <p className="repair-diff-page-note" data-testid="diff-rendering-note">
+        {t(
+          state?.wrapFallback
+            ? "内容较长，已分段显示，可横向滚动查看完整内容。"
+            : "红色表示删除，绿色表示新增；点击隐藏行可展开相邻内容。",
+        )}
       </p>
     </main>
   );

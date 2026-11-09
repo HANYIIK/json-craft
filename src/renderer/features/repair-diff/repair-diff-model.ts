@@ -1,6 +1,7 @@
-import { Change, type Chunk } from "@codemirror/merge";
+import { Change, Chunk } from "@codemirror/merge";
 import type { Text } from "@codemirror/state";
 import type { RepairStage } from "../../../shared/types";
+import type { DiffTextProjection } from "./diff-text-projection";
 
 export interface RepairDiffChange {
   id: string;
@@ -8,101 +9,6 @@ export interface RepairDiffChange {
   toA: number;
   fromB: number;
   toB: number;
-}
-
-export function longJsonLines(doc: Text) {
-  const lines: { from: number; to: number }[] = [];
-  let from = 0;
-  for (const line of doc.iterLines()) {
-    if (line.length >= 10_000) lines.push({ from, to: from + line.length });
-    from += line.length + 1;
-  }
-  return lines;
-}
-
-export function precedingLongLine(
-  lines: ReturnType<typeof longJsonLines>,
-  position: number,
-) {
-  let from = 0,
-    to = lines.length;
-  while (from < to) {
-    const middle = (from + to) >>> 1;
-    if (lines[middle].to <= position) from = middle + 1;
-    else to = middle;
-  }
-  return from ? lines[from - 1] : undefined;
-}
-
-export interface SharedLineGap {
-  from: number;
-  to: number;
-  size: number;
-  displaySize: number;
-}
-
-export function intersectLineGaps(
-  a: readonly SharedLineGap[],
-  b: readonly SharedLineGap[],
-) {
-  const gaps: SharedLineGap[] = [];
-  let right = 0;
-  for (const left of a) {
-    while (right < b.length && b[right].to <= left.from) right++;
-    for (
-      let index = right;
-      index < b.length && b[index].from < left.to;
-      index++
-    ) {
-      const from = Math.max(left.from, b[index].from);
-      const to = Math.min(left.to, b[index].to);
-      if (from < to) {
-        const ratio = (to - from) / (left.to - left.from);
-        gaps.push({
-          from,
-          to,
-          size: left.size * ratio,
-          displaySize: left.displaySize * ratio,
-        });
-      }
-    }
-  }
-  return gaps;
-}
-
-export function matchedLongJsonLines(
-  a: Text,
-  b: Text,
-  chunks: readonly Chunk[],
-) {
-  const pairs: { fromA: number; toA: number; fromB: number; toB: number }[] =
-    [];
-  let chunkIndex = 0,
-    offset = 0;
-  for (const line of longJsonLines(a)) {
-    while (chunkIndex < chunks.length && chunks[chunkIndex].toA <= line.from) {
-      const chunk = chunks[chunkIndex++];
-      offset = chunk.toB - chunk.toA;
-    }
-    const next = chunks[chunkIndex];
-    if (next && next.fromA < line.to && next.toA > line.from) continue;
-    const position = line.from + offset;
-    if (position < 0 || position > b.length) continue;
-    const other = b.lineAt(position);
-    if (
-      other.from !== position ||
-      other.length !== line.to - line.from ||
-      a.sliceString(line.from, line.to) !== other.text
-    )
-      continue;
-    pairs.push({
-      fromA: line.from,
-      toA: line.to,
-      fromB: other.from,
-      toB: other.to,
-    });
-  }
-  return pairs;
 }
 
 export function validatedRepairChanges(
@@ -157,6 +63,52 @@ export function nativeRepairChanges(changes: readonly RepairDiffChange[]) {
   );
 }
 
+export function mapProjectedChunks(
+  chunks: readonly Chunk[],
+  a: DiffTextProjection,
+  b: DiffTextProjection,
+): readonly Chunk[] {
+  if (!a.active && !b.active) return chunks;
+  return chunks.map((chunk) => {
+    const fromA = a.toSource(chunk.fromA);
+    const fromB = b.toSource(chunk.fromB);
+    return new Chunk(
+      chunk.changes.map(
+        (change) =>
+          new Change(
+            a.toSource(chunk.fromA + change.fromA) - fromA,
+            a.toSource(chunk.fromA + change.toA) - fromA,
+            b.toSource(chunk.fromB + change.fromB) - fromB,
+            b.toSource(chunk.fromB + change.toB) - fromB,
+          ),
+      ),
+      fromA,
+      chunk.fromA === chunk.toA ? fromA : a.toSource(chunk.endA) + 1,
+      fromB,
+      chunk.fromB === chunk.toB ? fromB : b.toSource(chunk.endB) + 1,
+      chunk.precise,
+    );
+  });
+}
+
+export function repairChunkRange(chunk: Chunk) {
+  const first = chunk.changes[0];
+  const last = chunk.changes[chunk.changes.length - 1];
+  return first
+    ? {
+        fromA: chunk.fromA + first.fromA,
+        toA: chunk.fromA + last.toA,
+        fromB: chunk.fromB + first.fromB,
+        toB: chunk.fromB + last.toB,
+      }
+    : {
+        fromA: chunk.fromA,
+        toA: chunk.endA,
+        fromB: chunk.fromB,
+        toB: chunk.endB,
+      };
+}
+
 function changedLineCount(doc: Text, from: number, to: number) {
   if (from === to) return 0;
   const end =
@@ -182,6 +134,21 @@ export function repairDiffLineCounts(
     removedLines += changedLineCount(before, chunk.fromA, chunk.toA);
   }
   return { addedLines, removedLines };
+}
+
+export function alignedDiffRows(
+  chunks: readonly Chunk[],
+  before: Text,
+  after: Text,
+) {
+  let rows = before.lines;
+  for (const chunk of chunks)
+    rows += Math.max(
+      0,
+      changedLineCount(after, chunk.fromB, chunk.toB) -
+        changedLineCount(before, chunk.fromA, chunk.toA),
+    );
+  return rows;
 }
 
 function distance(from: number, to: number, point: number) {
@@ -212,24 +179,6 @@ export function repairDifferenceIndex(index: number, count: number) {
   if (!count) return -1;
   if (index === -1) return count - 1;
   return Math.max(0, Math.min(count - 1, Math.trunc(index) || 0));
-}
-
-export function pairedDiffPosition(
-  chunks: readonly Chunk[],
-  position: number,
-  fromA: boolean,
-) {
-  let offset = 0;
-  for (const chunk of chunks) {
-    const from = fromA ? chunk.fromA : chunk.fromB;
-    const to = fromA ? chunk.toA : chunk.toB;
-    const otherFrom = fromA ? chunk.fromB : chunk.fromA;
-    const otherTo = fromA ? chunk.toB : chunk.toA;
-    if (position < from) break;
-    if (position < to) return Math.min(otherTo, otherFrom + position - from);
-    offset = otherTo - to;
-  }
-  return position + offset;
 }
 
 export function unchangedDiffRange(
