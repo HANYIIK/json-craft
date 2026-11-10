@@ -4,6 +4,7 @@ release/
 coverage/
 test-results/
 output/playwright/
+examples/local/
 .DS_Store
 __pycache__/
 *.py[cod]

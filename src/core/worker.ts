@@ -1,6 +1,7 @@
 import { alignJsonKeys } from "./json/compare";
 import { processStructuredJson } from "./json/extracted-json";
 import { findKeyValues } from "./json/extract";
+import { extractJsonFromLog } from "./json/log-extract";
 import type { WorkerRequest, WorkerResponse } from "../shared/worker";
 import type { ProcessingResult } from "../shared/types";
 
@@ -8,6 +9,31 @@ const worker = globalThis as unknown as DedicatedWorkerGlobalScope;
 
 worker.onmessage = (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
+  if (request.kind === "extract-log") {
+    try {
+      worker.postMessage({
+        id: request.id,
+        kind: request.kind,
+        result: extractJsonFromLog(
+          request.raw,
+          request.options,
+          request.recursiveUnescape,
+        ),
+      } satisfies WorkerResponse);
+    } catch (error) {
+      worker.postMessage({
+        id: request.id,
+        kind: request.kind,
+        result: {
+          items: [],
+          truncated: false,
+          elapsedMs: 0,
+          error: error instanceof Error ? error.message : "处理失败，请重试。",
+        },
+      } satisfies WorkerResponse);
+    }
+    return;
+  }
   if (request.kind === "align-keys") {
     worker.postMessage({
       id: request.id,

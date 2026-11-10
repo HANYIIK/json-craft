@@ -1,12 +1,29 @@
-# JSON Craft — 离线 JSON 格式化、修复与对比工具
+<div align="center">
+
+[English](README.md) | **简体中文**
+
+# JSON Craft
+
+### 离线 JSON 格式化、修复、对比与日志提取工具
 
 让杂乱的 JSON 清晰可读，让差异一目了然。
 
-[English](README.md) · **简体中文**
-
 一个在本机处理数据的 macOS / Windows JSON 工作台，支持格式化、修复、提取与对比。粘贴压缩后的接口响应、打开文件，或一次拖入多个文件，即可自动格式化，并保留原始输入。
 
+如果你喜欢 JSON Craft，欢迎点个 Star [⭐](https://github.com/HANYIIK/json-craft)。
+
+<p align="center">
+  <a href="https://github.com/HANYIIK/json-craft/releases/latest">
+    <img src="https://img.shields.io/github/v/release/HANYIIK/json-craft?style=flat-square&amp;color=23644a&amp;label=Release&amp;logo=github&amp;logoColor=white" alt="最新版本">
+  </a>
+  <a href="#下载与安装">
+    <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-334155?style=flat-square&amp;logo=apple&amp;logoColor=white" alt="支持平台：macOS 和 Windows">
+  </a>
+</p>
+
 [下载最新版本](https://github.com/HANYIIK/json-craft/releases/latest) · [反馈问题](https://github.com/HANYIIK/json-craft/issues)
+
+</div>
 
 ![中文版 JSON Craft：原始输入与格式化结果、递归去转义和数组折叠项数](resources/screenshots/overview-zh-CN.png)
 
@@ -15,6 +32,7 @@
 - **格式化与去转义。** 将压缩 JSON 整理为可读文本，去除外层 JSON 字符串包装；也可选择递归展开嵌套对象和数组中的 JSON 字符串，普通文本和 Markdown 链接保留原样。
 - **修复语法，并说明改了哪里。** 使用 `jsonrepair` 修复常见 JSON 语法错误，查看具体修改，并在独立的差异页面对比修复前后内容。
 - **对比两份 JSON。** 先自动格式化，再按第一份 JSON 的顺序递归对齐第二份的对象 Key，查看剩余差异；保留数组顺序，两侧独有字段仍会展示。
+- **从日志提取 JSON。** 从混合文本中识别对象、数组和 JSON 字符串，通过可横向滚动的标签页预览；关闭不需要的结果后，一键将剩余结果移入工作区并保存为 JSON 文件。
 - **按 Key 提取值。** 递归检索所有层级；同名字段出现多次时，先选择完整路径，再单独格式化、复制或导出对应值。
 - **查看时始终有上下文。** 支持查找替换、对象和数组折叠、折叠数组项数、父级路径跳转，以及让任意一侧编辑器独占应用内容页。
 - **处理多个文件。** 多选导入或拖入 `.json` 文件，切换历史记录、修改文件名；删除前确认，将关联文件移入系统废纸篓或回收站。
@@ -29,10 +47,10 @@ JSON 内容全部在本机处理，无需账号、上传或云服务。文件使
 
 | 平台                                    | 安装包                                                                                                                      | 其他格式                                                                                               |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| macOS 13+ · Apple Silicon（M 系列芯片） | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-arm64.dmg)        | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-arm64.zip) |
-| macOS 13+ · Intel 芯片                  | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-x64.dmg)                  | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-macOS-x64.zip)   |
-| Windows · x64                           | [Windows x64 安装程序](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-Windows-x64.exe)     | —                                                                                                      |
-| Windows · ARM64                         | [Windows ARM64 安装程序](https://github.com/HANYIIK/json-craft/releases/download/v0.2.1/JSON-Craft-0.2.1-Windows-arm64.exe) | —                                                                                                      |
+| macOS 13+ · Apple Silicon（M 系列芯片） | [Apple Silicon DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-arm64.dmg)        | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-arm64.zip) |
+| macOS 13+ · Intel 芯片                  | [Intel DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-x64.dmg)                  | [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-x64.zip)   |
+| Windows · x64                           | [Windows x64 安装程序](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-Windows-x64.exe)     | —                                                                                                      |
+| Windows · ARM64                         | [Windows ARM64 安装程序](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-Windows-arm64.exe) | —                                                                                                      |
 
 **macOS：** 打开 DMG，将 JSON Craft 拖入“应用程序”；或解压 ZIP 后将 App 移入“应用程序”。当前版本使用 ad-hoc 签名，**尚未经过 Apple 公证**。如果首次打开被系统拦截，请在“**系统设置 → 隐私与安全性 → 仍要打开**”中查看提示，并仅为从本仓库下载的文件确认打开，详见 [Apple 官方打开说明](https://support.apple.com/en-us/102445)。
 
@@ -61,6 +79,20 @@ JSON 内容全部在本机处理，无需账号、上传或云服务。文件使
 
 在本次会话中切换页面会保留对比草稿；草稿不会写入文件或转换历史，关闭应用后会清空。
 
+### 从日志中提取 JSON
+
+在侧栏“JSON 对比”下方打开“**JSON 提取**”，粘贴日志或混合文本后，点击“**提取 JSON**”。支持识别对象、数组和被转义的 JSON 字符串，普通日志标记、Markdown 链接及 `[REDACTED]` 等文本保持原样。
+
+提取结果受“**自动去转义**”“**递归去转义**”“**尝试修复**”和缩进选项控制，切换选项会重新处理结果。
+
+![中文版 JSON Craft：从混合日志提取 JSON，通过横向标签页切换并预览格式化结果](resources/screenshots/log-extract-zh-CN.png)
+
+通过标签页切换预览，支持复制、定位原文及独占应用内容页查看；结果较多时可横向滚动标签栏，悬停对应区域才显示覆盖式滚动条和标签关闭按钮，滚动条不预留空位，也不会挤占内容或改变布局。关闭不需要的标签后，点击“**移入工作区**”，即可将剩余结果保存为所设文件目录中的普通 `.json` 文件并加入转换历史；已移入的结果会显示标记，同一组结果不会重复移入。
+
+![中文版 JSON Craft：提取结果独占应用内容页预览，同时保留结果标签页](resources/screenshots/log-extract-expanded-zh-CN.png)
+
+日志和结果标签页仅在当前会话保留。关闭标签会将其从待移入结果中移除，已经保存的文件仍会保留；重新点击“**提取 JSON**”会开始新一组提取并恢复关闭的标签。单次最多提取 **200 项结果**，达到处理上限时请将剩余日志分段提取。
+
 ### 只提取需要的内容
 
 接口响应中的字段可能是对象、数组，也可能是一个被转义的 JSON 字符串。Key 提取可以检索所有层级，单独处理选中的值，同时保留源 JSON。
@@ -78,6 +110,7 @@ JSON 内容全部在本机处理，无需账号、上传或云服务。文件使
 - **原始输入自动落盘。** 新建输入及后续修改会保存为你指定 JSON 文件目录下的普通 `.json` 文件；未写完或语法无效的内容也会按原样保留。
 - **结果单独复制或导出。** 复制和导出使用当前展示的格式化结果或提取值，不会自动覆盖原始输入。
 - **对比使用独立工作区。** 在“JSON 对比”中导入或修改内容，不会修改源文件、创建转换历史或自动保存对比草稿。
+- **日志结果在移入时保存。** “JSON 提取”的日志和预览仅在当前会话保留；点击“移入工作区”后，未关闭且尚未移入的结果会生成文件和转换历史。
 - **历史用于恢复工作区。** 历史目录保存内部记录、格式化选项和提取状态；读取目录决定导入文件时优先打开的位置。
 - **导入时避免覆盖。** 从其他目录导入的文件会复制到 JSON 文件目录；两个目录相同时，直接使用原文件。
 - **删除前必须确认。** 弹窗会展示关联文件路径；确认后将该文件移入系统废纸篓或回收站，并删除对应历史。如果导入时创建的是副本，独立的外部原文件会保留。

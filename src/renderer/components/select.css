@@ -68,8 +68,6 @@
   background: var(--bg-panel);
   color: var(--text-primary);
   box-shadow: 0 6px 22px var(--shadow-panel);
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar) transparent;
 }
 
 .select-option {

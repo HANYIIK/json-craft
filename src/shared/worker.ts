@@ -1,4 +1,5 @@
 import type { KeyAlignmentResult } from "../core/json/compare";
+import type { LogExtractionResult } from "../core/json/log-extract";
 import type {
   FormatOptions,
   Indent,
@@ -30,8 +31,16 @@ export interface KeyAlignmentRequest {
   indent: Indent;
 }
 
+export interface LogExtractionRequest {
+  kind: "extract-log";
+  id: number;
+  raw: string;
+  options: FormatOptions;
+  recursiveUnescape: boolean;
+}
+
 export type WorkerRequest =
-  FormatRequest | KeySearchRequest | KeyAlignmentRequest;
+  FormatRequest | KeySearchRequest | KeyAlignmentRequest | LogExtractionRequest;
 
 export interface FormatResponse {
   kind: "format";
@@ -51,5 +60,14 @@ export interface KeyAlignmentResponse {
   result: KeyAlignmentResult;
 }
 
+export interface LogExtractionResponse {
+  kind: "extract-log";
+  id: number;
+  result: LogExtractionResult;
+}
+
 export type WorkerResponse =
-  FormatResponse | KeySearchResponse | KeyAlignmentResponse;
+  | FormatResponse
+  | KeySearchResponse
+  | KeyAlignmentResponse
+  | LogExtractionResponse;

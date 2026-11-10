@@ -149,9 +149,10 @@ button {
   padding-left: 14px;
 }
 .sidebar {
+  --sidebar-inset: 13px;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--line);
-  padding: 20px 13px 13px;
+  padding: 20px var(--sidebar-inset) 13px;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -217,8 +218,8 @@ button {
   min-height: 0;
   overflow: auto;
   flex: 1;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar) transparent;
+  margin-right: calc(-1 * var(--sidebar-inset));
+  padding-right: var(--sidebar-inset);
   padding-bottom: 10px;
 }
 .file-button {
@@ -379,8 +380,6 @@ button {
   flex-direction: column;
   padding: 24px 26px 14px;
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-subtle) transparent;
 }
 .workspace[hidden],
 .settings-page[hidden] {
@@ -699,8 +698,6 @@ input[type="checkbox"] {
   max-height: 265px;
   flex-shrink: 0;
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-subtle) transparent;
   padding-right: 2px;
 }
 .records-header {
@@ -962,7 +959,8 @@ input[type="checkbox"] {
     --sidebar-width: 200px;
   }
   .sidebar {
-    padding: 22px 10px 12px;
+    --sidebar-inset: 10px;
+    padding: 22px var(--sidebar-inset) 12px;
   }
   .brand {
     font-size: 15px;
@@ -1048,6 +1046,7 @@ input[type="checkbox"] {
     display: none;
   }
   .file-list {
+    margin-right: 0;
     grid-column: 1/-1;
     grid-row: 3;
     flex-direction: row;

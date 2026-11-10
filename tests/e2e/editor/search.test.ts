@@ -125,13 +125,16 @@ async function expectCount(panel: Locator, current: number, total: number) {
     "The search counter did not follow the query and selected match",
   );
   assert.equal(await count.getAttribute("role"), "status");
-  assert.equal(await count.getAttribute("aria-label"), "查找匹配进度");
+  assert.match(
+    (await count.getAttribute("aria-label")) ?? "",
+    /^(查找匹配进度|Search match position)$/,
+  );
 }
 
 async function assertAlignedInputs(panel: Locator) {
   const boundaries = await panel.evaluate((element) => {
     const search = element
-      .querySelector('input[name="search"]')!
+      .querySelector(".cm-search-field")!
       .getBoundingClientRect();
     const replace = element
       .querySelector('input[name="replace"]')!
@@ -152,6 +155,39 @@ async function assertAlignedInputs(panel: Locator) {
       `The search and replacement inputs are not aligned at their ${edge} edges: ${JSON.stringify(boundaries)}`,
     );
   }
+}
+
+async function assertReadableQuery(panel: Locator, minimumTextWidth: number) {
+  const sizes = await panel.locator(".cm-search-field").evaluate((element) => {
+    const input = element.querySelector<HTMLInputElement>("input")!;
+    const counter = element.querySelector<HTMLElement>(".cm-search-count")!;
+    const inputRect = input.getBoundingClientRect();
+    const countRect = counter.getBoundingClientRect();
+    const fieldRect = element.getBoundingClientRect();
+    const style = getComputedStyle(input);
+    return {
+      fieldWidth: fieldRect.width,
+      textWidth:
+        input.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight),
+      inputRight: inputRect.right,
+      countLeft: countRect.left,
+      countRight: countRect.right,
+      countWidth: countRect.width,
+      fieldRight: fieldRect.right,
+      paddingRight: parseFloat(style.paddingRight),
+    };
+  });
+  assert.ok(
+    sizes.textWidth >= minimumTextWidth,
+    `The match counter or navigation controls squeeze the query text: ${JSON.stringify(sizes)}`,
+  );
+  assert.ok(sizes.inputRight <= sizes.countLeft + 1);
+  assert.ok(sizes.countRight < sizes.fieldRight);
+  assert.ok(sizes.countWidth <= sizes.fieldWidth * 0.4 + 1);
+  assert.ok(sizes.paddingRight <= 8);
+  return sizes;
 }
 
 async function editorGeometry(page: Page, pane: Pane) {
@@ -346,6 +382,20 @@ async function assertContained(panel: Locator) {
         bounds.top + bounds.height / 2,
       );
       return {
+        name: element.getAttribute("name") || element.className,
+        hit: hit?.outerHTML.slice(0, 400),
+        bounds: {
+          top: bounds.top,
+          bottom: bounds.bottom,
+          left: bounds.left,
+          right: bounds.right,
+        },
+        panel: {
+          top: panel.top,
+          bottom: panel.bottom,
+          left: panel.left,
+          right: panel.right,
+        },
         contained:
           bounds.top >= panel.top - 1 && bounds.bottom <= panel.bottom + 1,
         reachable:
@@ -355,7 +405,15 @@ async function assertContained(panel: Locator) {
       };
     });
     assert.equal(visible.contained, true, "A search control remains clipped");
-    assert.equal(visible.reachable, true, "A search control is covered");
+    if (!visible.reachable)
+      await panel.page().screenshot({
+        path: path.join(screenshots, "search-control-covered.png"),
+      });
+    assert.equal(
+      visible.reachable,
+      true,
+      `A search control is covered: ${JSON.stringify(visible)}`,
+    );
   }
   return geometry;
 }
@@ -922,6 +980,96 @@ test(
             "Escape with no panel or selection did not restore both editors",
           );
         }
+      },
+    );
+
+    await t.test(
+      "keeps long queries readable beside content-sized bilingual counters",
+      async () => {
+        const query = "feature_flag_allowed_nodes_context_json";
+        await prepare(
+          page,
+          JSON.stringify({ values: Array.from({ length: 6 }, () => query) }),
+        );
+        for (const language of ["en", "zh-CN"] as const) {
+          await page
+            .getByRole("button", { name: /^(应用设置|Settings)$/ })
+            .click();
+          await page
+            .locator(".workspace-settings-theme [role=combobox]")
+            .nth(1)
+            .click();
+          await page
+            .getByRole("option", {
+              name: language === "en" ? "English" : "简体中文",
+              exact: true,
+            })
+            .click();
+          await poll(
+            () => page.locator("html").getAttribute("lang"),
+            (value) => value === language,
+            "The search layout fixture did not switch its real UI language",
+          );
+          await page.locator(".workspace-settings-back").click();
+          for (const layout of ["split", "focused", "compact"] as const) {
+            const width = layout === "compact" ? 780 : 1440;
+            await application.evaluate(({ BrowserWindow }, width) => {
+              BrowserWindow.getAllWindows()[0].setContentSize(width, 820);
+            }, width);
+            await poll(
+              () => page.evaluate(() => innerWidth),
+              (value) => value === width,
+              "The native window did not reach the search layout width",
+            );
+            if (layout === "focused")
+              await page.locator('[data-focus-toggle="input"]').click();
+            const panel = await openSearch(page, "input", query);
+            await expectCount(panel, 0, 6);
+            const sizes = await assertReadableQuery(
+              panel,
+              layout === "compact" ? 80 : 120,
+            );
+            assert.ok(
+              sizes.countWidth < 32,
+              `A six-match counter reserves unused width: ${JSON.stringify(sizes)}`,
+            );
+            assert.equal(
+              await panel.locator('input[name="search"]').inputValue(),
+              query,
+            );
+            await assertContained(panel);
+            await panel.locator('button[name="toggleReplace"]').click();
+            await panel.locator(".cm-search-replace").waitFor();
+            await assertAlignedInputs(panel);
+            await page.screenshot({
+              path: path.join(
+                screenshots,
+                `search-readable-${language}-${layout}.png`,
+              ),
+            });
+            await closePanels(page);
+            if (layout === "focused")
+              await page.locator('[data-focus-toggle="input"]').click();
+          }
+        }
+        await application.evaluate(({ BrowserWindow }) => {
+          BrowserWindow.getAllWindows()[0].setContentSize(1440, 820);
+        });
+        await prepare(
+          page,
+          JSON.stringify({ value: "needle ".repeat(12_345) }),
+          false,
+        );
+        const panel = await openSearch(page, "input", "needle");
+        await expectCount(panel, 0, 12_345);
+        await panel.locator('button[name="prev"]').click();
+        await expectCount(panel, 12_345, 12_345);
+        await assertReadableQuery(panel, 80);
+        assert.match(
+          (await panel.locator(".cm-search-count").getAttribute("title")) ?? "",
+          /12,345/,
+        );
+        await closePanels(page);
       },
     );
 

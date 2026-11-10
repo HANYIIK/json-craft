@@ -1,8 +1,8 @@
 {
   "name": "json-craft",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
-  "description": "A local-first JSON formatter, unescaper and repair workbench.",
+  "description": "An offline JSON formatter, repair, diff and log extraction workbench.",
   "main": "electron/main.cjs",
   "type": "module",
   "author": "JSON Craft contributors",

@@ -1,0 +1,52 @@
+.overlay-scrollbars {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  pointer-events: none;
+}
+
+.overlay-scrollbars[hidden],
+.overlay-scrollbar-rail[hidden] {
+  display: none;
+}
+
+.overlay-scrollbar-rail {
+  position: fixed;
+  overflow: hidden;
+  border-radius: 8px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.overlay-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--scrollbar);
+  background-clip: padding-box;
+}
+
+.overlay-scrollbar-rail[data-size="thin"][data-axis="x"]
+  .overlay-scrollbar-thumb {
+  border-top-width: 3px;
+}
+
+.overlay-scrollbar-thumb:hover,
+.overlay-scrollbars[data-dragging="x"] [data-axis="x"] .overlay-scrollbar-thumb,
+.overlay-scrollbars[data-dragging="y"]
+  [data-axis="y"]
+  .overlay-scrollbar-thumb {
+  background-color: color-mix(
+    in srgb,
+    var(--scrollbar) 70%,
+    var(--text-secondary)
+  );
+}
+
+.overlay-scrollbars[data-dragging],
+.overlay-scrollbars[data-dragging] .overlay-scrollbar-rail {
+  cursor: grabbing;
+}

@@ -3,6 +3,7 @@ import {
   mkdtemp,
   mkdir,
   readFile,
+  readdir,
   realpath,
   rm,
   writeFile,
@@ -289,6 +290,144 @@ try {
     historyCount,
   );
   assert.equal(await readFile(record.managedPath, "utf8"), damaged);
+  const previousFiles = await readdir(fileDirectory);
+  const previousIds = await page.evaluate(async () => {
+    const workspace = await window.desktop.workspace.load();
+    return workspace.records.map((item) => item.id);
+  });
+  await page.getByTestId("open-log-extraction").click();
+  assert.equal(
+    await page.getByTestId("open-log-extraction").innerText(),
+    "JSON Extract",
+  );
+  const firstExtracted = {
+    marker: "kept-first",
+    payload: JSON.stringify({ enabled: true }),
+    note: "[REDACTED]",
+    link: "[View profile](https://example.com/profile?id=1)",
+  };
+  const firstPreview = JSON.stringify(
+    { ...firstExtracted, payload: { enabled: true } },
+    null,
+    2,
+  );
+  const lastExtracted =
+    '{"marker":"kept-third","id":900719925474099312345,"items":["{\\"nested\\":true}"]}';
+  const lastPreview = [
+    "{",
+    '  "marker": "kept-third",',
+    '  "id": 900719925474099312345,',
+    '  "items": [',
+    "    {",
+    '      "nested": true',
+    "    }",
+    "  ]",
+    "}",
+  ].join("\n");
+  const mixedLog = [
+    "[INFO] Request started; [REDACTED] [View profile](https://example.com/profile?id=1)",
+    `INFO response=${JSON.stringify(firstExtracted)}`,
+    'DEBUG body={"marker":"closed-result","drop":true}',
+    `INFO escaped=${JSON.stringify(lastExtracted)} done`,
+  ].join("\n");
+  await page
+    .getByTestId("log-input-editor")
+    .locator(".cm-content")
+    .fill(mixedLog);
+  await page.getByTestId("extract-log-json").click();
+  const extraction = page.getByTestId("log-extraction-page");
+  const tabs = page.getByTestId("log-result-tabs").locator(".log-result-tab");
+  await poll(
+    async () => ({
+      count: await tabs.count(),
+      busy: await extraction
+        .locator(".log-results-panel")
+        .getAttribute("aria-busy"),
+    }),
+    ({ count, busy }) => count === 3 && busy === "false",
+    "Packaged log extraction did not find exactly three JSON results",
+  );
+  await poll(
+    () => copyEditor(page, "log-preview-editor"),
+    (value) => value === firstPreview,
+    "Packaged extracted preview did not decode nested JSON or preserve ordinary text",
+  );
+  await tabs.nth(2).getByRole("tab").click();
+  await poll(
+    () => copyEditor(page, "log-preview-editor"),
+    (value) => value === lastPreview,
+    "Packaged result tabs lost encoded JSON or large integer precision",
+  );
+  await page.getByTestId("log-preview-expand").click();
+  await poll(
+    () => extraction.getAttribute("data-preview-expanded"),
+    (value) => value === "true",
+    "Packaged extracted preview did not expand",
+  );
+  assert.equal(await page.getByTestId("log-input-editor").isVisible(), false);
+  assert.equal(await copyEditor(page, "log-preview-editor"), lastPreview);
+  const previewCopy = extraction.locator(".log-preview-footer .copy-button");
+  await previewCopy.click();
+  await poll(
+    () => previewCopy.getAttribute("data-copied"),
+    (value) => value === "true",
+    "Packaged extracted preview did not acknowledge copying",
+  );
+  assert.equal(
+    await application.evaluate(({ clipboard }) => clipboard.readText()),
+    lastPreview,
+  );
+  await page.getByTestId("log-preview-back").click();
+  await tabs.nth(1).hover();
+  await tabs.nth(1).locator(".log-tab-close").click();
+  assert.equal(await tabs.count(), 2);
+  const migrate = page.getByTestId("log-migrate-all");
+  await migrate.click();
+  await poll(
+    () =>
+      tabs.evaluateAll(
+        (elements) =>
+          elements.filter((item) => item.dataset.migrated === "true").length,
+      ),
+    (value) => value === 2,
+    "Packaged extraction migration did not mark both open results as saved",
+  );
+  assert.equal(await migrate.isDisabled(), true);
+  const migratedRecords = await page.evaluate(async (ids) => {
+    const workspace = await window.desktop.workspace.load();
+    return Promise.all(
+      workspace.records
+        .filter((item) => !ids.includes(item.id))
+        .map((item) => window.desktop.workspace.read(item.id)),
+    );
+  }, previousIds);
+  assert.equal(migratedRecords.length, 2);
+  assert.deepEqual(
+    migratedRecords.map((item) => item.raw).sort(),
+    [firstPreview, lastPreview].sort(),
+  );
+  for (const item of migratedRecords) {
+    assert.ok(item.managedPath);
+    assert.ok(!item.fileSaveError);
+    assert.match(item.name, /^extracted-\d+\.json$/);
+    assert.equal(path.dirname(item.managedPath), fileDirectory);
+    assert.equal(await readFile(item.managedPath, "utf8"), item.raw);
+  }
+  assert.deepEqual(
+    (await readdir(fileDirectory)).sort(),
+    [
+      ...previousFiles,
+      ...migratedRecords.map((item) => path.basename(item.managedPath)),
+    ].sort(),
+  );
+  await migrate.evaluate((button) => button.click());
+  assert.equal(
+    await page.evaluate(
+      async () => (await window.desktop.workspace.load()).records.length,
+    ),
+    historyCount + 2,
+  );
+  assert.equal(await readFile(record.managedPath, "utf8"), damaged);
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
@@ -304,6 +443,9 @@ try {
         "json-compare",
         "key-order-alignment",
         "comparison-context-navigation",
+        "log-json-extraction",
+        "result-tabs",
+        "log-result-migration",
       ],
     }),
   );

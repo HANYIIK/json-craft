@@ -184,9 +184,9 @@ class JsonSearchPanel implements Panel {
     };
     const option = (input: HTMLInputElement, label: string) => {
       const element = document.createElement("label");
-      const text = document.createTextNode("");
+      const text = document.createElement("span");
       this.localizers.push(() => {
-        text.nodeValue = phrase(label);
+        text.textContent = phrase(label);
       });
       element.append(input, text);
       return element;
@@ -205,6 +205,13 @@ class JsonSearchPanel implements Panel {
     const find = document.createElement("div");
     find.className = "cm-search-field";
     find.append(this.searchField, this.count);
+    const options = document.createElement("div");
+    options.className = "cm-search-options";
+    options.append(
+      option(this.caseField, "match case"),
+      option(this.regexpField, "regexp"),
+      option(this.wordField, "by word"),
+    );
     this.dom = document.createElement("div");
     this.dom.className = "cm-search";
     this.dom.append(
@@ -212,9 +219,7 @@ class JsonSearchPanel implements Panel {
       button("next", "next", jsonSearchCommands.next),
       button("prev", "previous", jsonSearchCommands.previous),
       button("select", "all", jsonSearchCommands.all),
-      option(this.caseField, "match case"),
-      option(this.regexpField, "regexp"),
-      option(this.wordField, "by word"),
+      options,
     );
     if (!view.state.readOnly) {
       const replacement = document.createElement("div");
@@ -383,7 +388,7 @@ class JsonSearchPanel implements Panel {
       numberFormatters[this.view.state.facet(searchPanelLanguage)];
     const current = formatter.format(ordinal);
     const total = formatter.format(size);
-    const text = this.counting ? translate("统计中…") : `${current} / ${total}`;
+    const text = this.counting ? translate("统计中…") : `${current}/${total}`;
     if (this.count.textContent !== text) this.count.textContent = text;
     this.count.title = this.counting
       ? translate("正在统计全文匹配")

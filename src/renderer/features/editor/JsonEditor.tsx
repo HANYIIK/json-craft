@@ -6,7 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
-import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import CodeMirror, {
+  ExternalChange,
+  type ReactCodeMirrorRef,
+} from "@uiw/react-codemirror";
 import { json } from "./json-language";
 import { EditorState } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
@@ -108,8 +111,6 @@ const editorTheme = EditorView.theme({
     lineHeight: "1.9",
     overflow: "auto",
     overscrollBehaviorY: "contain",
-    scrollbarWidth: "thin",
-    scrollbarColor: "var(--scrollbar) transparent",
   },
   ".cm-content": {
     padding: "15px 0",
@@ -187,6 +188,8 @@ interface Props {
   value: string;
   label: string;
   readOnly?: boolean;
+  syntaxHighlighting?: boolean;
+  placeholder?: string;
   wrap: boolean;
   selection?: EditorSelection;
   onChange?: (value: string) => void;
@@ -196,6 +199,8 @@ export function JsonEditor({
   value,
   label,
   readOnly = false,
+  syntaxHighlighting: highlightJson = true,
+  placeholder,
   wrap,
   selection,
   onChange,
@@ -228,21 +233,20 @@ export function JsonEditor({
       highlightActiveLine: !readOnly,
       highlightActiveLineGutter: !readOnly,
       autocompletion: false,
-      foldGutter: true,
+      foldGutter: highlightJson,
     }),
-    [readOnly],
+    [readOnly, highlightJson],
   );
   const extensions = useMemo(
     () => [
-      json(),
-      completeJsonFolding,
-      jsonFoldPlaceholder,
+      ...(highlightJson
+        ? [json(), completeJsonFolding, jsonFoldPlaceholder, highlight]
+        : []),
       jsonSearch,
       searchPhrases,
       searchPanelLanguage.of(language),
       colorModes[resolvedTheme],
       editorTheme,
-      highlight,
       EditorView.contentAttributes.of({
         "aria-label": label,
         "aria-readonly": String(readOnly),
@@ -251,7 +255,7 @@ export function JsonEditor({
       }),
       ...(wrap ? [EditorView.lineWrapping] : []),
     ],
-    [label, readOnly, wrap, resolvedTheme, language],
+    [label, readOnly, wrap, resolvedTheme, language, highlightJson],
   );
 
   useEffect(() => {
@@ -262,6 +266,15 @@ export function JsonEditor({
   const selectionFrom = selection?.from;
   const selectionTo = selection?.to;
   const selectionKey = selection?.key;
+  useLayoutEffect(() => {
+    const view = ref.current?.view;
+    if (!view || view.state.doc.toString() === value) return;
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: value },
+      annotations: ExternalChange.of(true),
+    });
+  }, [value, editorReady]);
+
   useEffect(() => {
     const view = ref.current?.view;
     if (!view || selectionFrom === undefined || selectionTo === undefined)
@@ -353,7 +366,9 @@ export function JsonEditor({
             return {
               doc: view.state.doc,
               position,
-              ancestors: getJsonAncestors(view.state, position),
+              ancestors: highlightJson
+                ? getJsonAncestors(view.state, position)
+                : [],
             };
           },
           write: (context) => {
@@ -391,7 +406,7 @@ export function JsonEditor({
       if (refreshContext.current === schedule)
         refreshContext.current = undefined;
     };
-  }, [editorReady]);
+  }, [editorReady, highlightJson]);
 
   useLayoutEffect(() => {
     const element = breadcrumbRef.current;
@@ -420,33 +435,35 @@ export function JsonEditor({
 
   return (
     <div className="json-editor">
-      <nav
-        ref={breadcrumbRef}
-        className="json-breadcrumbs"
-        aria-label={t("{{label}} 父级路径", { label })}
-      >
-        {ancestors.map((ancestor, index) => (
-          <span
-            className="json-breadcrumb"
-            key={`${ancestor.from}:${ancestor.path}`}
-          >
-            {index > 0 && (
-              <span className="json-breadcrumb-separator" aria-hidden="true">
-                ›
-              </span>
-            )}
-            <button
-              type="button"
-              data-path={ancestor.path}
-              aria-label={t("跳转到 {{path}}", { path: ancestor.path })}
-              title={ancestor.path}
-              onClick={() => jumpToAncestor(ancestor)}
+      {highlightJson && (
+        <nav
+          ref={breadcrumbRef}
+          className="json-breadcrumbs"
+          aria-label={t("{{label}} 父级路径", { label })}
+        >
+          {ancestors.map((ancestor, index) => (
+            <span
+              className="json-breadcrumb"
+              key={`${ancestor.from}:${ancestor.path}`}
             >
-              {ancestor.label || '""'}
-            </button>
-          </span>
-        ))}
-      </nav>
+              {index > 0 && (
+                <span className="json-breadcrumb-separator" aria-hidden="true">
+                  ›
+                </span>
+              )}
+              <button
+                type="button"
+                data-path={ancestor.path}
+                aria-label={t("跳转到 {{path}}", { path: ancestor.path })}
+                title={ancestor.path}
+                onClick={() => jumpToAncestor(ancestor)}
+              >
+                {ancestor.label || '""'}
+              </button>
+            </span>
+          ))}
+        </nav>
+      )}
       <CodeMirror
         ref={ref}
         className="json-editor-code"
@@ -460,7 +477,9 @@ export function JsonEditor({
         onCreateEditor={() => setEditorReady(true)}
         onChange={onChange}
         onUpdate={onEditorUpdate}
-        placeholder={t("粘贴压缩 JSON、转义字符串，或导入 .json 文件…")}
+        placeholder={
+          placeholder ?? t("粘贴压缩 JSON、转义字符串，或导入 .json 文件…")
+        }
         indentWithTab={false}
       />
     </div>

@@ -1,4 +1,5 @@
 import type { KeyAlignmentResult } from "../../core/json/compare";
+import type { LogExtractionResult } from "../../core/json/log-extract";
 import type {
   FormatOptions,
   Indent,
@@ -38,10 +39,14 @@ export class FormatClient {
       this.requests.delete(event.data.id);
       request.resolve(event.data.result);
     };
-    worker.onerror = () =>
-      this.reset(new Error("处理进程意外退出，请重新格式化。"));
-    worker.onmessageerror = () =>
-      this.reset(new Error("无法读取处理结果，请重试。"));
+    worker.onerror = () => {
+      if (this.worker === worker)
+        this.reset(new Error("处理进程意外退出，请重新格式化。"));
+    };
+    worker.onmessageerror = () => {
+      if (this.worker === worker)
+        this.reset(new Error("无法读取处理结果，请重试。"));
+    };
     this.worker = worker;
     return worker;
   }
@@ -70,6 +75,26 @@ export class FormatClient {
     return this.request({ kind: "align-keys", left, right, indent });
   }
 
+  extractLog(
+    raw: string,
+    options: FormatOptions,
+    recursiveUnescape = true,
+  ): Promise<LogExtractionResult> {
+    return this.request({
+      kind: "extract-log",
+      raw,
+      options,
+      recursiveUnescape,
+    });
+  }
+
+  cancel() {
+    this.reset(new Error("处理已取消。"));
+  }
+
+  private request(
+    request: Omit<Extract<WorkerRequest, { kind: "extract-log" }>, "id">,
+  ): Promise<LogExtractionResult>;
   private request(
     request: Omit<Extract<WorkerRequest, { kind: "align-keys" }>, "id">,
   ): Promise<KeyAlignmentResult>;

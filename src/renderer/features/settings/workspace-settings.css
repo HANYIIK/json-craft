@@ -6,8 +6,6 @@
   overflow: auto;
   overscroll-behavior-y: contain;
   background: var(--bg-app);
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar) transparent;
 }
 
 .workspace-settings-content {

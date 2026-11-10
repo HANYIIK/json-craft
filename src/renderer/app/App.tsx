@@ -23,6 +23,7 @@ import {
   Upload,
   Undo2,
   RotateCw,
+  ScanText,
 } from "lucide-react";
 import { defaultOptions, MAX_FILE_BYTES } from "../../shared/types";
 import type {
@@ -44,10 +45,16 @@ import {
   type EditorSelection,
 } from "../features/editor/JsonEditor";
 import { CopyButton } from "../components/CopyButton";
+import { OverlayScrollbars } from "../components/OverlayScrollbars";
 import {
   ComparisonPage,
   type ComparisonPageHandle,
 } from "../features/comparison/ComparisonPage";
+import {
+  LogExtractionPage,
+  type LogExtractionPageHandle,
+} from "../features/log-extraction/LogExtractionPage";
+import type { LogJsonCandidate } from "../../core/json/log-extract";
 import { DeleteConfirmation } from "../features/history/DeleteConfirmation";
 import { KeyExtractor } from "../features/extraction/KeyExtractor";
 import { HistorySync, type SaveStatus } from "../features/history/history-sync";
@@ -286,6 +293,14 @@ export function App() {
   const comparisonMode = useRef(false);
   comparisonMode.current = comparisonOpen;
   const comparison = useRef<ComparisonPageHandle>(null);
+  const [logExtractionOpen, setLogExtractionOpen] = useState(false);
+  const [logExtractionVisited, setLogExtractionVisited] = useState(false);
+  const [logPreviewExpanded, setLogPreviewExpanded] = useState(false);
+  const logExtraction = useRef<LogExtractionPageHandle>(null);
+  const logExtractionMode = useRef(false);
+  logExtractionMode.current = logExtractionOpen;
+  const migratedLogItems = useRef(new WeakMap<LogJsonCandidate, string>());
+  const migrationOperation = useRef<Promise<void> | undefined>(undefined);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem("json-craft.sidebar-collapsed") === "true";
@@ -457,7 +472,10 @@ export function App() {
   const command = platform === "darwin" ? "⌘" : "Ctrl";
   const sidebarHidden =
     sidebarCollapsed ||
-    (!settingsOpen && (focusedPane !== null || Boolean(diffSnapshot)));
+    (!settingsOpen &&
+      (focusedPane !== null ||
+        Boolean(diffSnapshot) ||
+        (logExtractionOpen && logPreviewExpanded)));
 
   useEffect(() => {
     if (settingsOpen || diffSnapshot) return;
@@ -552,6 +570,7 @@ export function App() {
       const shouldAutoCopy =
         allowAutoCopy &&
         !comparisonMode.current &&
+        !logExtractionMode.current &&
         activeRef.current === doc.id;
       const automaticExtraction =
         override === undefined && Boolean(doc.autoExtract);
@@ -694,6 +713,8 @@ export function App() {
           );
           return Boolean(
             readyRef.current &&
+            !comparisonMode.current &&
+            !logExtractionMode.current &&
             clipboardGeneration.current === copyGeneration &&
             settingsDraftRef.current.autoCopy &&
             (settingsDraftRef.current.recursiveUnescape ?? true) ===
@@ -1058,6 +1079,7 @@ export function App() {
       setDocuments((previous) => [...previous, ...added]);
       setActiveId(added[0].id);
       setComparisonOpen(false);
+      setLogExtractionOpen(false);
       setSettingsOpen(false);
       setFocusedPane(null);
       setDiffSnapshot(undefined);
@@ -1202,6 +1224,7 @@ export function App() {
     setDocuments((previous) => [...previous, doc]);
     setActiveId(doc.id);
     setComparisonOpen(false);
+    setLogExtractionOpen(false);
     setSettingsOpen(false);
     setFocusedPane(null);
     setDiffSnapshot(undefined);
@@ -1210,7 +1233,76 @@ export function App() {
     notify("");
   }, [notify, flushSettings]);
 
+  const migrateLogItems = useCallback(
+    (items: LogJsonCandidate[], importedOptions: FormatOptions) => {
+      if (migrationOperation.current) return migrationOperation.current;
+      const operation = (async () => {
+        if (!readyRef.current || closing.current)
+          throw new Error(t("工作区尚未就绪，请稍后重试。"));
+        await flushSettings(true);
+        let timestamp = Date.now();
+        for (const item of items) {
+          if (!item.result.success || !item.result.output.trim())
+            throw new Error(t("只能迁移已成功提取的 JSON。"));
+          if (
+            new TextEncoder().encode(item.result.output).byteLength >
+            MAX_FILE_BYTES
+          )
+            throw new Error(t("文件超过 20 MiB，请缩小后重试。"));
+          const cached = migratedLogItems.current.get(item);
+          let doc = cached
+            ? documentsRef.current.find(
+                (existing) =>
+                  existing.id === cached && existing.raw === item.result.output,
+              )
+            : undefined;
+          if (!doc) {
+            let name: string;
+            do {
+              name = `extracted-${timestamp++}.json`;
+            } while (
+              documentsRef.current.some(
+                (existing) =>
+                  existing.name.toLowerCase() === name.toLowerCase(),
+              )
+            );
+            doc = {
+              id: crypto.randomUUID(),
+              name,
+              raw: item.result.output,
+              revision: 0,
+              source: "scratch",
+              status: "pending",
+              options: { ...importedOptions },
+              loaded: true,
+            };
+            migratedLogItems.current.set(item, doc.id);
+            setDocuments((previous) => [...previous, doc!]);
+          }
+          sync.schedule(historySnapshot(doc));
+          await sync.flush(doc.id);
+          if (doc.status === "pending") await formatDocument(doc);
+        }
+        notify(
+          t("已将 {{count}} 项 JSON 保存至工作区", { count: items.length }),
+        );
+      })();
+      const tracked = operation.finally(() => {
+        importOperations.current.delete(tracked);
+        migrationOperation.current = undefined;
+      });
+      migrationOperation.current = tracked;
+      importOperations.current.add(tracked);
+      return tracked;
+    },
+    [flushSettings, formatDocument, notify, setDocuments, sync],
+  );
+
   const formatCurrent = useCallback(() => {
+    if (logExtractionMode.current) {
+      logExtraction.current?.extract();
+      return;
+    }
     if (comparisonMode.current) {
       comparison.current?.compare();
       return;
@@ -1225,7 +1317,7 @@ export function App() {
   }, [formatDocument]);
 
   const exportCurrent = useCallback(async () => {
-    if (comparisonMode.current) return;
+    if (comparisonMode.current || logExtractionMode.current) return;
     const doc = documentsRef.current.find(
       (item) => item.id === activeRef.current,
     );
@@ -1465,7 +1557,9 @@ export function App() {
               status: "pending",
               result: undefined,
               autoCopyRequested:
-                !comparisonMode.current && doc.id === activeRef.current,
+                !comparisonMode.current &&
+                !logExtractionMode.current &&
+                doc.id === activeRef.current,
             },
       ),
     );
@@ -1746,6 +1840,7 @@ export function App() {
 
   function selectDocument(id: string) {
     setComparisonOpen(false);
+    setLogExtractionOpen(false);
     setSettingsOpen(false);
     clipboardGeneration.current++;
     setDocuments((previous) =>
@@ -2079,7 +2174,7 @@ export function App() {
       ref={applicationRef}
       className={`application platform-${platform}`}
       data-focused-pane={
-        settingsOpen || comparisonOpen || diffSnapshot
+        settingsOpen || comparisonOpen || logExtractionOpen || diffSnapshot
           ? undefined
           : (focusedPane ?? undefined)
       }
@@ -2088,9 +2183,11 @@ export function App() {
           ? "settings"
           : comparisonOpen
             ? "comparison"
-            : diffSnapshot
-              ? "diff"
-              : "workspace"
+            : logExtractionOpen
+              ? "log-extraction"
+              : diffSnapshot
+                ? "diff"
+                : "workspace"
       }
       data-sidebar-collapsed={sidebarHidden ? "true" : undefined}
       onDragEnterCapture={(event) => {
@@ -2152,6 +2249,8 @@ export function App() {
                   if (!settingsOpen) {
                     setDiffSnapshot(undefined);
                     setFocusedPane(null);
+                    logExtraction.current?.collapsePreview();
+                    setLogPreviewExpanded(false);
                   }
                 } else setSidebarCollapsed(true);
               })
@@ -2178,6 +2277,8 @@ export function App() {
             <Settings size={16} />
           ) : comparisonOpen ? (
             <Columns2 size={16} />
+          ) : logExtractionOpen ? (
+            <ScanText size={16} />
           ) : (
             <FileJson2 size={16} />
           )}
@@ -2188,6 +2289,10 @@ export function App() {
           ) : comparisonOpen ? (
             <h1 className="window-name" data-testid="active-file-name">
               {t("JSON 对比")}
+            </h1>
+          ) : logExtractionOpen ? (
+            <h1 className="window-name" data-testid="active-file-name">
+              {t("JSON 提取")}
             </h1>
           ) : (
             <h1
@@ -2257,6 +2362,7 @@ export function App() {
               onClick={() => {
                 setComparisonVisited(true);
                 setComparisonOpen(true);
+                setLogExtractionOpen(false);
                 setSettingsOpen(false);
                 setFocusedPane(null);
                 setDiffSnapshot(undefined);
@@ -2265,6 +2371,26 @@ export function App() {
             >
               <Columns2 size={16} />
               {t("JSON 对比")}
+            </button>
+            <button
+              className="button ghost full-width log-extraction-entry"
+              data-testid="open-log-extraction"
+              disabled={!storageReady}
+              aria-current={
+                logExtractionOpen && !settingsOpen ? "page" : undefined
+              }
+              onClick={() => {
+                setLogExtractionVisited(true);
+                setLogExtractionOpen(true);
+                setComparisonOpen(false);
+                setSettingsOpen(false);
+                setFocusedPane(null);
+                setDiffSnapshot(undefined);
+                clipboardGeneration.current++;
+              }}
+            >
+              <ScanText size={16} />
+              {t("JSON 提取")}
             </button>
           </div>
           <div className="file-section-header">
@@ -2288,7 +2414,10 @@ export function App() {
                 id={doc.id}
                 name={doc.name}
                 selected={
-                  !comparisonOpen && !settingsOpen && doc.id === activeId
+                  !comparisonOpen &&
+                  !logExtractionOpen &&
+                  !settingsOpen &&
+                  doc.id === activeId
                 }
                 status={
                   doc.saveState === "error"
@@ -2345,7 +2474,12 @@ export function App() {
         </aside>
         <main
           className="workspace"
-          hidden={settingsOpen || comparisonOpen || Boolean(diffSnapshot)}
+          hidden={
+            settingsOpen ||
+            comparisonOpen ||
+            logExtractionOpen ||
+            Boolean(diffSnapshot)
+          }
         >
           <div className="workspace-filebar" data-testid="workspace-filebar">
             <span className="workspace-file-location">
@@ -3134,6 +3268,21 @@ export function App() {
             onClose={() => setComparisonOpen(false)}
           />
         )}
+        {logExtractionVisited && (
+          <LogExtractionPage
+            ref={logExtraction}
+            hidden={!logExtractionOpen || settingsOpen}
+            recursiveUnescape={settingsDraft.recursiveUnescape ?? true}
+            onRecursiveChange={(recursiveUnescape) =>
+              updatePaths({ recursiveUnescape })
+            }
+            wrap={wrap}
+            onWrapChange={() => setWrap((previous) => !previous)}
+            onClose={() => setLogExtractionOpen(false)}
+            onPreviewExpandedChange={setLogPreviewExpanded}
+            onMigrate={migrateLogItems}
+          />
+        )}
         {diffSnapshot && (
           <RepairDiffPage
             key={diffSnapshot.key}
@@ -3183,6 +3332,7 @@ export function App() {
           </div>
         </div>
       )}
+      <OverlayScrollbars />
       <input
         ref={fileInput}
         type="file"
