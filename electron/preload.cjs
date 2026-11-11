@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld("desktop", {
     remove: (id) => ipcRenderer.invoke("json-craft:workspace:remove", id),
     rename: (id, name) =>
       ipcRenderer.invoke("json-craft:workspace:rename", id, name),
+    setPinned: (id, pinned) =>
+      ipcRenderer.invoke("json-craft:workspace:setPinned", id, pinned),
     updateSettings: (patch) =>
       ipcRenderer.invoke("json-craft:workspace:updateSettings", patch),
     chooseDirectory: (kind) =>

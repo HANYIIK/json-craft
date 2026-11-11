@@ -1,4 +1,5 @@
 {
+  "置顶状态无效，请使用开启或关闭状态。": "Invalid pin status. Use true or false.",
   "语言设置无效，请选择跟随系统、简体中文或英语。": "Invalid language preference. Choose system, Simplified Chinese, or English.",
   "主题设置无效，请选择跟随系统、浅色或深色。": "Invalid theme preference. Choose system, light, or dark.",
   "自动复制设置无效，请使用开启或关闭状态。": "Invalid automatic copy preference. Use enabled or disabled.",

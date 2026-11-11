@@ -24,6 +24,7 @@ import {
 } from "playwright";
 
 import { isolateWorkspace } from "../support/workspace-fixture";
+import { chooseHistoryAction } from "../support/history-menu";
 
 const projectRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -536,13 +537,7 @@ test(
         assert.equal(await readFile(imported.sourcePath, "utf8"), raw);
         assert.ok(failedId);
         assert.equal((await readHistory(page, failedId)).raw, raw);
-        await page
-          .locator(`[data-history-id="${imported.id}"]`)
-          .getByRole("button", {
-            name: `重命名 ${imported.name}`,
-            exact: true,
-          })
-          .click();
+        await chooseHistoryAction(page, imported.name, "rename");
         const filename = page.getByRole("textbox", {
           name: "文件名",
           exact: true,

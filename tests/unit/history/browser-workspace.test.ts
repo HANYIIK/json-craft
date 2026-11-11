@@ -47,6 +47,75 @@ function record(): HistoryRecord {
   };
 }
 
+test("browser pinning survives restarts without editing content or timestamps and unpinning restores recency", async (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: Date.parse("2026-11-01T00:00:00Z"),
+  });
+  const { workspace } = fixture(t);
+  await workspace.create(record());
+  const first = await workspace.read(record().id);
+  t.mock.timers.tick(60_000);
+  const second = await workspace.create({
+    ...record(),
+    id: "second",
+    name: "second.json",
+  });
+  await workspace.setActive(second.id);
+  t.mock.timers.tick(60_000);
+  const pinned = await workspace.setPinned(first.id, true);
+  assert.equal(pinned.pinned, true);
+  const restored = createBrowserWorkspace();
+  assert.deepEqual(await restored.read(first.id), { ...first, pinned: true });
+  assert.deepEqual(
+    (await restored.load()).records.map((value) => value.id),
+    [first.id, second.id],
+  );
+  assert.equal((await restored.load()).activeId, second.id);
+  await restored.update(first.id, {
+    raw: first.raw,
+    options: first.options,
+    extraction: null,
+  });
+  assert.equal((await restored.read(first.id)).pinned, true);
+  await restored.setPinned(first.id, false);
+  const unpinned = createBrowserWorkspace();
+  assert.deepEqual(await unpinned.read(first.id), { ...first, pinned: false });
+  assert.deepEqual(
+    (await unpinned.load()).records.map((value) => value.id),
+    [second.id, first.id],
+  );
+});
+
+test("invalid browser pin values and missing histories preserve stored data", async (t) => {
+  const { workspace, storage } = fixture(t);
+  await workspace.create(record());
+  const original = storage.getItem(storageKey);
+  for (const invalid of ["true", "false", 1, 0, null, undefined, {}, []]) {
+    await assert.rejects(
+      workspace.setPinned(record().id, invalid as boolean),
+      /置顶/,
+    );
+    await assert.rejects(
+      workspace.create({
+        ...record(),
+        id: "invalid",
+        pinned: invalid as boolean,
+      }),
+      /置顶/,
+    );
+    assert.equal(storage.getItem(storageKey), original);
+  }
+  await assert.rejects(workspace.setPinned("missing", true), /不存在/);
+  assert.equal(storage.getItem(storageKey), original);
+  const invalidState = JSON.parse(original!);
+  invalidState.records[0].pinned = "true";
+  const content = JSON.stringify(invalidState);
+  storage.setItem(storageKey, content);
+  await assert.rejects(createBrowserWorkspace().load(), /置顶/);
+  assert.equal(storage.getItem(storageKey), content);
+});
+
 test("browser history preserves edit times during view changes and sorts actual edits newest first", async (t) => {
   t.mock.timers.enable({
     apis: ["Date"],

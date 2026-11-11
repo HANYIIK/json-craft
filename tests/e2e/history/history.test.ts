@@ -21,6 +21,7 @@ import type {
 } from "../../../src/shared/types";
 
 import { isolateWorkspace } from "../support/workspace-fixture";
+import { chooseHistoryAction } from "../support/history-menu";
 
 const projectRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -103,9 +104,7 @@ async function renameCurrent(
   const previous = (
     await page.getByRole("heading", { level: 1 }).innerText()
   ).trim();
-  await page
-    .getByRole("button", { name: `重命名 ${previous}`, exact: true })
-    .click();
+  await chooseHistoryAction(page, previous, "rename");
   const input = page.getByRole("textbox", { name: "文件名", exact: true });
   await poll(
     () =>
@@ -392,12 +391,7 @@ require(${JSON.stringify(path.join(projectRoot, "electron", "main.cjs"))});
         const conflict = path.join(path.dirname(source), "already-there.json");
         const occupied = '{"occupied":"must remain unchanged"}';
         await writeFile(conflict, occupied, "utf8");
-        await page
-          .getByRole("button", {
-            name: "重命名 source-renamed.json",
-            exact: true,
-          })
-          .click();
+        await chooseHistoryAction(page, "source-renamed.json", "rename");
         const filename = page.getByRole("textbox", {
           name: "文件名",
           exact: true,
@@ -434,12 +428,7 @@ require(${JSON.stringify(path.join(projectRoot, "electron", "main.cjs"))});
     await t.test(
       "keeps a deleted history record removed after restarting",
       async () => {
-        await page
-          .getByRole("button", {
-            name: "删除 persisted-note.json",
-            exact: true,
-          })
-          .click();
+        await chooseHistoryAction(page, "persisted-note.json", "delete");
         await page
           .getByTestId("delete-confirmation")
           .getByRole("button", { name: "删除文件", exact: true })
@@ -458,7 +447,7 @@ require(${JSON.stringify(path.join(projectRoot, "electron", "main.cjs"))});
         assert.equal(
           await page
             .getByRole("button", {
-              name: "重命名 persisted-note.json",
+              name: "更多操作 persisted-note.json",
               exact: true,
             })
             .count(),
@@ -851,9 +840,7 @@ require(${JSON.stringify(path.join(projectRoot, "electron", "main.cjs"))});
           "The isolated workspace did not initialize its samples",
         );
         for (const record of initial.records) {
-          await page
-            .getByRole("button", { name: `删除 ${record.name}`, exact: true })
-            .click();
+          await chooseHistoryAction(page, record.name, "delete");
           await page
             .getByTestId("delete-confirmation")
             .getByRole("button", { name: "删除记录", exact: true })
@@ -871,7 +858,7 @@ require(${JSON.stringify(path.join(projectRoot, "electron", "main.cjs"))});
         assert.equal(state.records.length, 0);
         assert.equal(
           await page
-            .getByRole("button", { name: "重命名 release.json", exact: true })
+            .getByRole("button", { name: "更多操作 release.json", exact: true })
             .count(),
           0,
         );

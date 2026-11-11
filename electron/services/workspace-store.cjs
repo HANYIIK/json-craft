@@ -38,6 +38,12 @@ function validRecursiveUnescape(value) {
   return value;
 }
 
+function validPinned(value) {
+  if (typeof value !== "boolean")
+    throw new Error("置顶状态无效，请使用开启或关闭状态。");
+  return value;
+}
+
 function validDirectory(value) {
   if (
     typeof value !== "string" ||
@@ -158,6 +164,9 @@ function validRecord(value) {
     ...(sourcePath ? { sourcePath: path.resolve(sourcePath) } : {}),
     ...(managedPath ? { managedPath: path.resolve(managedPath) } : {}),
     ...(value.fileSaveError ? { fileSaveError: value.fileSaveError } : {}),
+    ...(Object.hasOwn(value, "pinned")
+      ? { pinned: validPinned(value.pinned) }
+      : {}),
     options: validOptions(value.options),
     ...(value.extraction
       ? { extraction: validExtraction(value.extraction) }
@@ -403,6 +412,7 @@ function createWorkspaceStore({
       }))
       .sort(
         (a, b) =>
+          Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
           Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
           a.id.localeCompare(b.id),
       );
@@ -855,6 +865,20 @@ function createWorkspaceStore({
           }
         }
         const saved = summary(await syncManagedFile(next));
+        records.set(id, saved);
+        return saved;
+      }),
+    setPinned: (id, pinned) =>
+      serialize(async () => {
+        validId(id);
+        validPinned(pinned);
+        await initialize();
+        if (!records.has(id)) throw new Error("历史记录已删除或不存在。");
+        const record = await readCurrentRecord(id);
+        if (record.pinned === pinned) return summary(record);
+        const next = { ...record, pinned };
+        await atomicWrite(recordPath(id), next);
+        const saved = summary(next);
         records.set(id, saved);
         return saved;
       }),

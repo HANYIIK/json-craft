@@ -16,6 +16,7 @@ import test from "node:test";
 import { _electron, type ElectronApplication, type Page } from "playwright";
 import type { HistoryRecord } from "../../../src/shared/types";
 import { isolateWorkspace } from "../support/workspace-fixture";
+import { chooseHistoryAction } from "../support/history-menu";
 
 const projectRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const probeKey = "__jsonCraftHistoryDelete";
@@ -110,9 +111,7 @@ async function createInput(page: Page, raw: string) {
 }
 
 async function openDelete(page: Page, record: HistoryRecord) {
-  await page
-    .locator(`[data-history-id="${record.id}"] [data-history-delete]`)
-    .click();
+  await chooseHistoryAction(page, record.name, "delete");
   const dialog = page.getByTestId("delete-confirmation");
   await dialog.waitFor();
   assert.equal(await dialog.getAttribute("role"), "alertdialog");
@@ -305,9 +304,7 @@ require(${JSON.stringify(path.join(projectRoot, "electron", "main.cjs"))});
       "Enter, Escape and backdrop cancellation keep files, records and rename drafts",
       async () => {
         retained = await createInput(page, '{"keep":"until confirmed"}');
-        await page
-          .getByRole("button", { name: `重命名 ${retained.name}`, exact: true })
-          .click();
+        await chooseHistoryAction(page, retained.name, "rename");
         const filename = page.getByRole("textbox", {
           name: "文件名",
           exact: true,

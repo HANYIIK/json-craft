@@ -50,7 +50,7 @@ function fixture(t: TestContext, initial: HistoryRecord[] = []) {
     autoCopy: false,
   };
   const events: { id: string; status: SaveStatus; error?: string }[] = [];
-  const calls = { create: 0, update: 0, remove: 0, rename: 0 };
+  const calls = { create: 0, update: 0, remove: 0, rename: 0, setPinned: 0 };
   const api: WorkspaceApi = {
     load: async () => ({
       initialized: true,
@@ -94,6 +94,14 @@ function fixture(t: TestContext, initial: HistoryRecord[] = []) {
       records.set(id, next);
       return summary(next);
     },
+    setPinned: async (id, pinned) => {
+      calls.setPinned++;
+      const previous = records.get(id);
+      if (!previous) throw new Error("missing record");
+      const next = { ...previous, pinned };
+      records.set(id, next);
+      return summary(next);
+    },
     updateSettings: async (patch) => Object.assign(settings, patch),
     chooseDirectory: async () => null,
     setActive: async () => {},
@@ -107,6 +115,132 @@ function fixture(t: TestContext, initial: HistoryRecord[] = []) {
   t.after(() => sync.dispose());
   return { records, events, calls, api, sync };
 }
+
+test("pin-only changes and refreshed summaries do not schedule content saves", async (t) => {
+  const initial = record();
+  const { sync, records, calls } = fixture(t, [initial]);
+  sync.adopt(initial);
+  const pinned = await sync.setPinned(initial.id, true);
+  sync.adopt(pinned);
+  sync.schedule({ ...initial, pinned: true });
+  await sync.flushAll();
+  assert.equal(calls.create, 0);
+  assert.equal(calls.update, 0);
+  assert.equal(records.get(initial.id)?.pinned, true);
+  await sync.setPinned(initial.id, false);
+  assert.equal(records.get(initial.id)?.pinned, false);
+  assert.equal(calls.setPinned, 2);
+});
+
+test("pinning a new history flushes creation and the edits received during its save first", async (t) => {
+  const { api, sync, records, calls } = fixture(t);
+  const started = deferred();
+  const release = deferred();
+  const create = api.create;
+  const update = api.update;
+  const setPinned = api.setPinned;
+  const actions: string[] = [];
+  api.create = async (value) => {
+    actions.push(`create:${value.raw}`);
+    started.resolve();
+    await release.promise;
+    return create(value);
+  };
+  api.update = async (id, changes) => {
+    actions.push(`update:${changes.raw}`);
+    return update(id, changes);
+  };
+  api.setPinned = async (id, pinned) => {
+    actions.push(`pin:${pinned}`);
+    return setPinned(id, pinned);
+  };
+  sync.schedule(record("first"));
+  const pinning = sync.setPinned("record-one", true);
+  await started.promise;
+  sync.schedule(record("latest"));
+  release.resolve();
+  await pinning;
+  assert.deepEqual(actions, ["create:first", "update:latest", "pin:true"]);
+  assert.equal(records.get("record-one")?.raw, "latest");
+  assert.equal(records.get("record-one")?.pinned, true);
+  sync.schedule({ ...record("latest"), pinned: true });
+  await sync.flushAll();
+  assert.equal(calls.create, 1);
+  assert.equal(calls.update, 1);
+});
+
+test("close flushing waits for pin persistence and releases rejected pin operations", async (t) => {
+  const initial = record();
+  const { api, sync, records } = fixture(t, [initial]);
+  sync.adopt(initial);
+  const started = deferred();
+  const release = deferred();
+  const setPinned = api.setPinned;
+  api.setPinned = async (id, pinned) => {
+    started.resolve();
+    await release.promise;
+    return setPinned(id, pinned);
+  };
+  const pinning = sync.setPinned(initial.id, true);
+  await started.promise;
+  assert.equal(sync.hasPending(), true);
+  let closed = false;
+  const closing = sync.flushAll().then(() => {
+    closed = true;
+  });
+  await setImmediate();
+  assert.equal(closed, false);
+  release.resolve();
+  await Promise.all([pinning, closing]);
+  assert.equal(records.get(initial.id)?.pinned, true);
+  assert.equal(sync.hasPending(), false);
+  api.setPinned = async () => {
+    throw new Error("pin blocked");
+  };
+  await assert.rejects(sync.setPinned(initial.id, false), /pin blocked/);
+  assert.equal(sync.hasPending(), false);
+  await sync.flushAll();
+  assert.equal(records.get(initial.id)?.pinned, true);
+});
+
+test("histories being deleted cannot be pinned and deletion during creation prevents the pin call", async (t) => {
+  const initial = record();
+  const { api, sync, records, calls } = fixture(t, [initial]);
+  sync.adopt(initial);
+  const started = deferred();
+  const release = deferred();
+  const remove = api.remove;
+  api.remove = async (id) => {
+    started.resolve();
+    await release.promise;
+    return remove(id);
+  };
+  const deleting = sync.remove(initial.id);
+  await started.promise;
+  await assert.rejects(sync.setPinned(initial.id, true), /已删除/);
+  release.resolve();
+  await deleting;
+  assert.equal(calls.setPinned, 0);
+  assert.equal(records.has(initial.id), false);
+
+  const creating = deferred();
+  const saveRelease = deferred();
+  const create = api.create;
+  api.create = async (value) => {
+    creating.resolve();
+    await saveRelease.promise;
+    return create(value);
+  };
+  sync.schedule(record("new", "new-record"));
+  const pinning = sync.setPinned("new-record", true);
+  const rejected = assert.rejects(pinning, /已删除/);
+  await creating.promise;
+  const removing = sync.remove("new-record");
+  saveRelease.resolve();
+  await Promise.all([rejected, removing]);
+  assert.equal(records.has("new-record"), false);
+  assert.equal(calls.setPinned, 0);
+});
 
 test("refreshing summaries preserves loaded snapshots and does not save untouched files", async (t) => {
   const initial = [record("first", "one"), record("second", "two")];

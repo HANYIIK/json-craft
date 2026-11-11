@@ -312,15 +312,13 @@ try {
       transfer.items.add(
         new File([right], "large-right.json", { type: "application/json" }),
       );
-      document
-        .querySelector(".application")
-        .dispatchEvent(
-          new DragEvent("drop", {
-            bubbles: true,
-            cancelable: true,
-            dataTransfer: transfer,
-          }),
-        );
+      document.querySelector(".application").dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
     },
     { left: largeLeft, right: largeRight },
   );
@@ -501,6 +499,96 @@ try {
     historyCount + 2,
   );
   assert.equal(await readFile(record.managedPath, "utf8"), damaged);
+  const recentRecords = await page.evaluate(
+    async () => (await window.desktop.workspace.load()).records,
+  );
+  const recentOrder = recentRecords.map((item) => item.id);
+  const pinTargetId = recentOrder
+    .filter((id) => migratedRecords.some((item) => item.id === id))
+    .at(-1);
+  const pinTarget = migratedRecords.find((item) => item.id === pinTargetId);
+  assert.ok(pinTarget);
+  assert.ok(recentOrder.indexOf(pinTarget.id) > 0);
+  assert.ok(recentRecords.every((item) => !item.pinned));
+  const historyRows = page.locator("[data-history-id]");
+  const readHistoryOrder = () =>
+    historyRows.evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-history-id")),
+    );
+  await poll(
+    readHistoryOrder,
+    (ids) => JSON.stringify(ids) === JSON.stringify(recentOrder),
+    "Packaged history did not show the recent records in order",
+  );
+  const pinRow = page.locator(`[data-history-id="${pinTarget.id}"]`);
+  for (const pinned of [true, false]) {
+    await pinRow.hover();
+    await pinRow
+      .getByRole("button", {
+        name: `More actions for ${pinTarget.name}`,
+        exact: true,
+      })
+      .click();
+    const menu = page.getByRole("menu");
+    await menu
+      .getByRole("menuitem", {
+        name: pinned ? "Pin" : "Unpin",
+        exact: true,
+      })
+      .click();
+    await menu.waitFor({ state: "detached" });
+    const expectedOrder = pinned
+      ? [pinTarget.id, ...recentOrder.filter((id) => id !== pinTarget.id)]
+      : recentOrder;
+    await poll(
+      readHistoryOrder,
+      (ids) => JSON.stringify(ids) === JSON.stringify(expectedOrder),
+      `Packaged history did not restore the ${pinned ? "pinned" : "recent"} order`,
+    );
+    await poll(
+      () => pinRow.getAttribute("data-pinned"),
+      (value) => value === String(pinned),
+      "Packaged history did not display the new pin state",
+    );
+    assert.deepEqual(
+      await page.evaluate(
+        (id) => window.desktop.workspace.read(id),
+        pinTarget.id,
+      ),
+      { ...pinTarget, pinned },
+    );
+    assert.deepEqual(
+      JSON.parse(
+        await readFile(
+          path.join(historyDirectory, `history-${pinTarget.id}.json`),
+          "utf8",
+        ),
+      ),
+      { ...pinTarget, pinned },
+    );
+    await page.reload();
+    await poll(
+      readHistoryOrder,
+      (ids) => JSON.stringify(ids) === JSON.stringify(expectedOrder),
+      "Packaged history lost its pin order after reloading",
+    );
+    assert.equal(await pinRow.getAttribute("data-pinned"), String(pinned));
+    assert.equal(
+      await pinRow.locator("time").getAttribute("datetime"),
+      pinTarget.updatedAt,
+    );
+    const reloadedRecords = await page.evaluate(
+      async () => (await window.desktop.workspace.load()).records,
+    );
+    assert.deepEqual(
+      reloadedRecords.map((item) => item.id),
+      expectedOrder,
+    );
+    assert.equal(
+      reloadedRecords.find((item) => item.id === pinTarget.id)?.pinned,
+      pinned,
+    );
+  }
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
@@ -520,6 +608,7 @@ try {
         "log-json-extraction",
         "result-tabs",
         "log-result-migration",
+        "history-pinning",
       ],
     }),
   );

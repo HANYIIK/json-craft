@@ -203,6 +203,19 @@ export class HistorySync {
     });
   }
 
+  setPinned(id: string, pinned: boolean) {
+    const operation = (async () => {
+      await this.flush(id);
+      if (this.isRemoving(id) || this.entries.get(id)?.deleted)
+        throw new Error("历史记录已删除。");
+      return this.api.setPinned(id, pinned);
+    })();
+    this.operations.add(operation);
+    return operation.finally(() => {
+      this.operations.delete(operation);
+    });
+  }
+
   dispose() {
     for (const entry of this.entries.values()) clearTimeout(entry.timer);
   }

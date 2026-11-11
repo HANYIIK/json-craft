@@ -15,6 +15,7 @@ import test from "node:test";
 import { _electron, type ElectronApplication, type Page } from "playwright";
 import type { HistoryRecord, ThemePreference } from "../../../src/shared/types";
 import { isolateWorkspace } from "../support/workspace-fixture";
+import { chooseHistoryAction } from "../support/history-menu";
 
 const projectRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const artifacts = path.join(projectRoot, "output", "playwright");
@@ -325,9 +326,7 @@ test(
         const raw = '{"navigation":"new input"}';
         await replaceInput(page, raw);
         await savedRecord(page, raw);
-        await page
-          .getByRole("button", { name: `重命名 ${name}`, exact: true })
-          .click();
+        await chooseHistoryAction(page, name, "rename");
         const renamed = "navigation-" + "long-file-name-".repeat(8) + ".json";
         const input = page.getByRole("textbox", {
           name: "文件名",
@@ -339,7 +338,7 @@ test(
         await poll(
           () =>
             page
-              .getByRole("button", { name: `重命名 ${renamed}`, exact: true })
+              .getByRole("button", { name: `更多操作 ${renamed}`, exact: true })
               .isVisible(),
           Boolean,
           "The history rename did not finish",

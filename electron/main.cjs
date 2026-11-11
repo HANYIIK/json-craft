@@ -433,6 +433,7 @@ for (const method of [
   "update",
   "remove",
   "rename",
+  "setPinned",
   "setActive",
 ])
   handle(`json-craft:workspace:${method}`, (...args) =>

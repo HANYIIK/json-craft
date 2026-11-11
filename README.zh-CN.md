@@ -43,10 +43,10 @@
 
 | 平台                                    | 安装包                                                                                                                                                                                                          |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS 13+ · Apple Silicon（M 系列芯片） | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-arm64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-arm64.zip) |
-| macOS 13+ · Intel                       | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-x64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-x64.zip)     |
-| Windows · x64                           | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-Windows-x64.exe)                                                                                                          |
-| Windows · ARM64                         | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-Windows-arm64.exe)                                                                                                        |
+| macOS 13+ · Apple Silicon（M 系列芯片） | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.4.0/JSON-Craft-0.4.0-macOS-arm64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.4.0/JSON-Craft-0.4.0-macOS-arm64.zip) |
+| macOS 13+ · Intel                       | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.4.0/JSON-Craft-0.4.0-macOS-x64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.4.0/JSON-Craft-0.4.0-macOS-x64.zip)     |
+| Windows · x64                           | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.4.0/JSON-Craft-0.4.0-Windows-x64.exe)                                                                                                          |
+| Windows · ARM64                         | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.4.0/JSON-Craft-0.4.0-Windows-arm64.exe)                                                                                                        |
 
 **macOS：** 打开 DMG，将 JSON Craft 拖入“应用程序”，或解压 ZIP 使用。当前安装包尚未经过 Apple 公证；如果首次打开被拦截，请参考 [Apple 官方打开说明](https://support.apple.com/en-us/102445)。
 
@@ -75,6 +75,8 @@
 ## 保存方式
 
 主工作区的输入会自动保存为所选目录中的 `.json` 文件，格式化结果可单独复制或导出。对比草稿和日志提取结果仅在当前会话保留；需要在关闭应用后保留提取结果，请先将其移入工作区。
+
+悬停历史记录并打开“**⋯**”，即可置顶、修改名称或删除。置顶记录优先显示，每组均按最近编辑时间倒序排列。
 
 <details>
 <summary>更多截图</summary>

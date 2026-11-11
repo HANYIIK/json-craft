@@ -33,6 +33,12 @@ function validRecursiveUnescape(value: unknown): boolean {
   return value;
 }
 
+function validPinned(value: unknown): boolean {
+  if (typeof value !== "boolean")
+    throw new Error("置顶状态无效，请使用开启或关闭状态。");
+  return value;
+}
+
 export function createBrowserWorkspace(): WorkspaceApi {
   const key = "json-craft-workspace-v1";
   const read = (): {
@@ -58,6 +64,8 @@ export function createBrowserWorkspace(): WorkspaceApi {
           },
           activeId: null,
         };
+    for (const record of state.records)
+      if (Object.hasOwn(record, "pinned")) validPinned(record.pinned);
     return {
       ...state,
       settings: {
@@ -97,6 +105,7 @@ export function createBrowserWorkspace(): WorkspaceApi {
       return found;
     },
     async create(record) {
+      if (Object.hasOwn(record, "pinned")) validPinned(record.pinned);
       const state = read();
       if (state.records.some((item) => item.id === record.id))
         throw new Error("历史记录已存在。");
@@ -153,6 +162,16 @@ export function createBrowserWorkspace(): WorkspaceApi {
       if (record.name === normalized) return summary(record);
       record.name = normalized;
       record.updatedAt = new Date().toISOString();
+      write(state);
+      return summary(record);
+    },
+    async setPinned(id, pinned) {
+      validPinned(pinned);
+      const state = read();
+      const record = state.records.find((item) => item.id === id);
+      if (!record) throw new Error("历史记录不存在。");
+      if (record.pinned === pinned) return summary(record);
+      record.pinned = pinned;
       write(state);
       return summary(record);
     },

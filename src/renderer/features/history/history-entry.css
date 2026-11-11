@@ -42,7 +42,13 @@
 }
 
 .history-entry-select > svg {
+  flex-shrink: 0;
   color: var(--icon);
+}
+
+.history-entry-select > .history-entry-pin {
+  margin-left: auto;
+  color: var(--accent);
 }
 
 .history-entry-selected .history-entry-select > svg {
@@ -86,8 +92,75 @@
   color: var(--accent);
 }
 
-.history-entry-delete:hover:not(:disabled) {
+.history-actions-trigger {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.history-entry:hover .history-actions-trigger,
+.history-entry:focus-within .history-actions-trigger,
+.history-actions-trigger[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.history-actions-trigger[data-open] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.history-actions-menu {
+  position: fixed;
+  z-index: 1000;
+  width: 156px;
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--bg-panel);
+  box-shadow: 0 6px 22px var(--shadow-panel);
+}
+
+.history-actions-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  font-size: 12px;
+}
+
+.history-actions-menu > button > svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.history-actions-menu > button:hover,
+.history-actions-menu > button:focus-visible {
+  outline: none;
+  background: var(--bg-hover);
+}
+
+.history-actions-menu > .history-actions-delete {
+  margin-top: 3px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 4px 4px;
   color: var(--error);
+}
+
+.history-actions-menu > .history-actions-delete > svg {
+  color: inherit;
+}
+
+.history-actions-menu > .history-actions-delete:hover,
+.history-actions-menu > .history-actions-delete:focus-visible {
   background: var(--danger-hover);
 }
 
@@ -178,8 +251,19 @@
 }
 
 @media (pointer: coarse) {
+  .history-actions-trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .history-entry-action {
     width: 28px;
     height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-actions-trigger {
+    transition: none;
   }
 }

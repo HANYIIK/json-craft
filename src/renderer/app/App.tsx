@@ -116,6 +116,7 @@ interface WorkDocument {
   autoCopyRequested?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  pinned?: boolean;
   loaded?: boolean;
   persisted?: boolean;
   characters?: number;
@@ -133,6 +134,7 @@ function historySnapshot(doc: WorkDocument): HistoryRecord {
     sourcePath: doc.sourcePath,
     managedPath: doc.managedPath,
     fileSaveError: doc.fileSaveError,
+    pinned: doc.pinned ?? false,
     options: doc.options ?? defaultOptions,
     extraction: doc.extraction
       ? {
@@ -413,6 +415,7 @@ export function App() {
                         persisted: true,
                         createdAt: summary.createdAt,
                         updatedAt: summary.updatedAt,
+                        pinned: summary.pinned,
                         characters: summary.characters,
                       }
                     : {}),
@@ -765,6 +768,7 @@ export function App() {
           saveError: record.fileSaveError,
           status: record.raw.trim() ? "pending" : "empty",
           name: live.name !== previous.name ? live.name : record.name,
+          pinned: live.pinned !== previous.pinned ? live.pinned : record.pinned,
           sourcePath:
             live.sourcePath !== previous.sourcePath
               ? live.sourcePath
@@ -840,6 +844,7 @@ export function App() {
             return {
               ...doc,
               name: record.name,
+              pinned: record.pinned,
               managedPath: record.managedPath,
               fileSaveError: record.fileSaveError,
               ...(doc.fileSaveError || record.fileSaveError
@@ -1895,6 +1900,16 @@ export function App() {
     }
   }
 
+  async function pinDocument(id: string, pinned: boolean) {
+    queueCurrentDocuments();
+    const saved = await sync.setPinned(id, pinned);
+    setDocuments((previous) =>
+      previous.map((doc) =>
+        doc.id === id ? { ...doc, pinned: saved.pinned } : doc,
+      ),
+    );
+  }
+
   async function deleteDocument(id: string) {
     const hasFile = Boolean(
       documentsRef.current.find((doc) => doc.id === id)?.managedPath,
@@ -2449,10 +2464,12 @@ export function App() {
                             : "pending"
                 }
                 updatedAt={doc.updatedAt}
+                pinned={doc.pinned}
                 saveError={doc.saveError}
                 onSelect={() => selectDocument(doc.id)}
                 onRename={(name) => renameDocument(doc.id, name)}
                 onDelete={() => requestDeleteDocument(doc.id)}
+                onPin={(pinned) => pinDocument(doc.id, pinned)}
               />
             ))}
             {storageReady && !documents.length && (

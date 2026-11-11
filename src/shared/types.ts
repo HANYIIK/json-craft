@@ -119,6 +119,7 @@ export interface HistoryRecord {
   sourcePath?: string;
   managedPath?: string;
   fileSaveError?: string;
+  pinned?: boolean;
   options: FormatOptions;
   extraction?: SavedExtraction;
   createdAt: string;
@@ -165,6 +166,7 @@ export interface WorkspaceApi {
   update(id: string, changes: HistoryUpdate): Promise<HistorySummary>;
   remove(id: string): Promise<void>;
   rename(id: string, name: string): Promise<HistorySummary>;
+  setPinned(id: string, pinned: boolean): Promise<HistorySummary>;
   updateSettings(patch: Partial<WorkspaceSettings>): Promise<WorkspaceSettings>;
   chooseDirectory(kind: DirectoryKind): Promise<WorkspaceSettings | null>;
   setActive(id: string | null): Promise<void>;

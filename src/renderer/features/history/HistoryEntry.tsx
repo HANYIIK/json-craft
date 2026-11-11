@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FileJson2, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import { FileJson2, LoaderCircle, Pin } from "lucide-react";
 import { localizeMessage, useI18n } from "../../i18n/i18n";
+import { HistoryActions } from "./HistoryActions";
 import "./history-entry.css";
 
 interface Props {
@@ -10,10 +11,12 @@ interface Props {
   status: string;
   statusKind: "pending" | "processing" | "repair" | "ok" | "error" | "saving";
   updatedAt?: string;
+  pinned?: boolean;
   saveError?: string;
   onSelect: () => void;
   onRename: (name: string) => Promise<void>;
   onDelete: () => Promise<boolean>;
+  onPin: (pinned: boolean) => Promise<void>;
 }
 
 const dateFormatters = new Map<
@@ -48,16 +51,19 @@ export function HistoryEntry({
   status,
   statusKind,
   updatedAt,
+  pinned = false,
   saveError,
   onSelect,
   onRename,
   onDelete,
+  onPin,
 }: Props) {
   const { t, language } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pinning, setPinning] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const selectRef = useRef<HTMLButtonElement>(null);
@@ -100,6 +106,10 @@ export function HistoryEntry({
 
   function beginRename() {
     if (pending.current) return;
+    if (editing) {
+      inputRef.current?.focus();
+      return;
+    }
     skipBlur.current = false;
     setDraft(name);
     setError("");
@@ -159,6 +169,7 @@ export function HistoryEntry({
       const removed = await onDelete();
       if (!mounted.current || currentOperation !== operation.current) return;
       if (removed) setEditing(false);
+      else if (editing) requestAnimationFrame(() => inputRef.current?.focus());
     } catch (failure) {
       if (!mounted.current || currentOperation !== operation.current) return;
       setError(
@@ -172,10 +183,52 @@ export function HistoryEntry({
     }
   }
 
+  async function togglePin() {
+    if (pending.current) return;
+    const origin = document.activeElement;
+    pending.current = true;
+    const currentOperation = ++operation.current;
+    setPinning(true);
+    setError("");
+    try {
+      await onPin(!pinned);
+      if (!mounted.current || currentOperation !== operation.current) return;
+      requestAnimationFrame(() => {
+        selectRef.current?.scrollIntoView({ block: "nearest" });
+        if (editing) inputRef.current?.focus();
+      });
+    } catch (failure) {
+      if (!mounted.current || currentOperation !== operation.current) return;
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "无法修改置顶状态，请重试。",
+      );
+    } finally {
+      if (mounted.current && currentOperation === operation.current) {
+        pending.current = false;
+        setPinning(false);
+        requestAnimationFrame(() => {
+          if (!mounted.current || currentOperation !== operation.current)
+            return;
+          if (
+            document.activeElement !== document.body &&
+            document.activeElement !== origin
+          )
+            return;
+          if (editing) inputRef.current?.focus({ preventScroll: true });
+          else if (origin instanceof HTMLElement && origin.isConnected)
+            origin.focus({ preventScroll: true });
+        });
+      }
+    }
+  }
+
   return (
     <div
       className={`history-entry ${selected ? "history-entry-selected" : ""} ${editing ? "history-entry-editing" : ""}`}
       data-history-id={id}
+      data-pinned={pinned}
     >
       <div className="history-entry-line">
         <button
@@ -193,6 +246,13 @@ export function HistoryEntry({
         >
           <FileJson2 size={17} />
           {!editing && <span className="history-entry-name">{name}</span>}
+          {pinned && !editing && (
+            <Pin
+              size={11}
+              className="history-entry-pin"
+              aria-label={t("已置顶")}
+            />
+          )}
         </button>
         {editing && (
           <input
@@ -203,7 +263,7 @@ export function HistoryEntry({
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
-            disabled={renaming || deleting}
+            disabled={renaming || deleting || pinning}
             onChange={(event) => {
               setDraft(event.target.value);
               setError("");
@@ -226,8 +286,8 @@ export function HistoryEntry({
               if (
                 skipBlur.current ||
                 next
-                  ?.closest("[data-history-delete]")
-                  ?.getAttribute("data-history-delete") === id
+                  ?.closest("[data-history-actions]")
+                  ?.getAttribute("data-history-actions") === id
               ) {
                 skipBlur.current = false;
                 return;
@@ -237,43 +297,16 @@ export function HistoryEntry({
           />
         )}
         <div className="history-entry-controls">
-          {!editing && (
-            <button
-              type="button"
-              className="history-entry-action"
-              aria-label={t("重命名 {{name}}", { name })}
-              title={t("重命名")}
-              onClick={beginRename}
-              disabled={renaming || deleting}
-            >
-              <Pencil size={12} />
-            </button>
-          )}
-          {renaming && <LoaderCircle size={12} className="spin" />}
-          <button
-            type="button"
-            className="history-entry-action history-entry-delete"
-            data-history-delete={id}
-            aria-label={t("删除 {{name}}", { name })}
-            title={t("删除历史记录")}
-            onPointerDown={() => {
-              skipBlur.current = true;
-            }}
-            onPointerUp={() => {
-              skipBlur.current = false;
-            }}
-            onPointerCancel={() => {
-              skipBlur.current = false;
-            }}
-            onClick={() => void deleteEntry()}
-            disabled={renaming || deleting}
-          >
-            {deleting ? (
-              <LoaderCircle size={12} className="spin" />
-            ) : (
-              <Trash2 size={12} />
-            )}
-          </button>
+          <HistoryActions
+            id={id}
+            name={name}
+            pinned={pinned}
+            disabled={renaming || deleting || pinning}
+            busy={renaming || deleting || pinning}
+            onPin={() => void togglePin()}
+            onRename={beginRename}
+            onDelete={() => void deleteEntry()}
+          />
         </div>
       </div>
       <div className={`history-entry-meta history-status-${statusKind}`}>

@@ -37,6 +37,7 @@ interface Store {
   update(id: string, update: HistoryUpdate): Promise<HistorySummary>;
   remove(id: string): Promise<void>;
   rename(id: string, name: string): Promise<HistorySummary>;
+  setPinned(id: string, pinned: boolean): Promise<HistorySummary>;
   updateSettings(patch: Partial<WorkspaceSettings>): Promise<WorkspaceSettings>;
   setActive(id: string | null): Promise<void>;
   getSettings(): Promise<WorkspaceSettings>;
@@ -144,6 +145,106 @@ test("creates persistent records without parsing or normalizing the input", asyn
   assert.equal(state.records[0].characters, raw.length);
   assert.ok(!Object.hasOwn(state.records[0], "raw"));
   assert.equal((await restart().read("first")).raw, raw);
+});
+
+test("pinning and unpinning persist without changing content, paths, active history, or timestamps", async (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: Date.parse("2026-11-01T00:00:00Z"),
+  });
+  const { store, restart } = await fixture(t);
+  await store.create(record("first"));
+  const first = await store.read("first");
+  const managedBefore = await stat(first.managedPath!);
+  t.mock.timers.tick(60_000);
+  const second = await store.create(record("second"));
+  await store.setActive(second.id);
+  t.mock.timers.tick(60_000);
+  const pinned = await store.setPinned(first.id, true);
+  assert.equal(pinned.pinned, true);
+  assert.deepEqual(await restart().read(first.id), { ...first, pinned: true });
+  assert.deepEqual(
+    (await restart().load()).records.map((value) => value.id),
+    [first.id, second.id],
+  );
+  assert.equal((await restart().load()).activeId, second.id);
+  assert.equal(await readFile(first.managedPath!, "utf8"), first.raw);
+  assert.equal((await stat(first.managedPath!)).mtimeMs, managedBefore.mtimeMs);
+  await store.update(first.id, {
+    raw: first.raw,
+    options: first.options,
+    extraction: null,
+  });
+  assert.equal((await store.read(first.id)).pinned, true);
+  await store.setPinned(first.id, false);
+  assert.deepEqual(await restart().read(first.id), { ...first, pinned: false });
+  assert.deepEqual(
+    (await restart().load()).records.map((value) => value.id),
+    [second.id, first.id],
+  );
+  assert.equal((await stat(first.managedPath!)).mtimeMs, managedBefore.mtimeMs);
+});
+
+test("invalid pin values and record metadata are rejected without changing existing data", async (t) => {
+  const { store, restart } = await fixture(t);
+  await store.create(record());
+  const state = await store.load();
+  const historyPath = path.join(
+    state.settings.historyDirectory,
+    "history-record-a.json",
+  );
+  const original = await readFile(historyPath, "utf8");
+  for (const invalid of ["true", "false", 1, 0, null, undefined, {}, []]) {
+    await assert.rejects(
+      store.setPinned("record-a", invalid as boolean),
+      /置顶/,
+    );
+    await assert.rejects(
+      store.create(record("invalid", { pinned: invalid as boolean })),
+      /置顶/,
+    );
+    assert.equal(await readFile(historyPath, "utf8"), original);
+    assert.deepEqual((await store.load()).records, state.records);
+  }
+  await assert.rejects(store.setPinned("../record-a", true), /标识/);
+  await assert.rejects(store.setPinned("missing", true), /不存在/);
+  const malformed = JSON.stringify({ ...JSON.parse(original), pinned: "true" });
+  await writeFile(historyPath, malformed);
+  await assert.rejects(restart().load(), /置顶/);
+  assert.equal(await readFile(historyPath, "utf8"), malformed);
+});
+
+test("a failed atomic pin write preserves disk and cached pin state and can be retried", async (t) => {
+  let fail = false;
+  const { store, restart } = await fixture(t, {
+    rename: async (from: string, to: string) => {
+      if (fail && path.basename(to) === "history-record-a.json")
+        throw new Error("pin write blocked");
+      return nativeRename(from, to);
+    },
+  });
+  await store.create(record());
+  const original = await store.read("record-a");
+  fail = true;
+  await assert.rejects(store.setPinned("record-a", true), /pin write blocked/);
+  assert.deepEqual(await store.read("record-a"), original);
+  assert.deepEqual(await restart().read("record-a"), original);
+  assert.equal((await store.load()).records[0].pinned, undefined);
+  fail = false;
+  assert.equal((await store.setPinned("record-a", true)).pinned, true);
+});
+
+test("queued pinning waits for creation and cannot recreate a deleted history", async (t) => {
+  const { store, restart } = await fixture(t);
+  await Promise.all([
+    store.create(record()),
+    store.setPinned("record-a", true),
+  ]);
+  assert.equal((await restart().read("record-a")).pinned, true);
+  const removing = store.remove("record-a");
+  await assert.rejects(store.setPinned("record-a", false), /已删除|不存在/);
+  await removing;
+  assert.deepEqual((await restart().load()).records, []);
 });
 
 test("last edit times change only for content edits and renames and sort newest first across restarts", async (t) => {
