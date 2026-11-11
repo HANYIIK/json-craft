@@ -60,6 +60,7 @@ import { KeyExtractor } from "../features/extraction/KeyExtractor";
 import { HistorySync, type SaveStatus } from "../features/history/history-sync";
 import { createBrowserWorkspace } from "../features/history/browser-workspace";
 import { HistoryEntry } from "../features/history/HistoryEntry";
+import { compareHistoryRecency } from "../features/history/history-order";
 import { WorkspaceSettingsPanel } from "../features/settings/WorkspaceSettings";
 import { Select } from "../components/Select";
 import { Brand } from "./Brand";
@@ -440,6 +441,10 @@ export function App() {
   activeRef.current = activeId;
   optionsRef.current = options;
   const current = documents.find((doc) => doc.id === activeId) ?? draft;
+  const historyDocuments = useMemo(
+    () => [...documents].sort(compareHistoryRecency),
+    [documents],
+  );
   const result = current.result;
   const keyQuery =
     current.keyQuery ??
@@ -2408,7 +2413,7 @@ export function App() {
             </button>
           </div>
           <nav className="file-list" aria-label={t("JSON 文件")}>
-            {documents.map((doc) => (
+            {historyDocuments.map((doc) => (
               <HistoryEntry
                 key={doc.id}
                 id={doc.id}

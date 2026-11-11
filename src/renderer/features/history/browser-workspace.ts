@@ -7,6 +7,7 @@ import type {
   WorkspaceSettings,
   WorkspaceState,
 } from "../../../shared/types";
+import { compareHistoryRecency } from "./history-order";
 
 function validLanguage(value: unknown): LanguagePreference {
   if (value !== "system" && value !== "zh-CN" && value !== "en")
@@ -85,7 +86,10 @@ export function createBrowserWorkspace(): WorkspaceApi {
   return {
     async load(): Promise<WorkspaceState> {
       const state = read();
-      return { ...state, records: state.records.map(summary) };
+      return {
+        ...state,
+        records: state.records.map(summary).sort(compareHistoryRecency),
+      };
     },
     async read(id) {
       const found = read().records.find((record) => record.id === id);
@@ -114,7 +118,10 @@ export function createBrowserWorkspace(): WorkspaceApi {
         ...record,
         ...changes,
         extraction: changes.extraction ?? undefined,
-        updatedAt: new Date().toISOString(),
+        updatedAt:
+          changes.raw !== record.raw
+            ? new Date().toISOString()
+            : record.updatedAt,
       };
       state.records = state.records.map((item) =>
         item.id === id ? saved : item,
@@ -143,6 +150,7 @@ export function createBrowserWorkspace(): WorkspaceApi {
         )
       )
         throw new Error("同名历史记录已存在。");
+      if (record.name === normalized) return summary(record);
       record.name = normalized;
       record.updatedAt = new Date().toISOString();
       write(state);

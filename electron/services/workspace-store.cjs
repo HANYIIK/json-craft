@@ -403,7 +403,8 @@ function createWorkspaceStore({
       }))
       .sort(
         (a, b) =>
-          b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id),
+          Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
+          a.id.localeCompare(b.id),
       );
   }
 
@@ -703,7 +704,10 @@ function createWorkspaceStore({
           ...record,
           raw: validRaw(changes.raw),
           options: validOptions(changes.options),
-          updatedAt: new Date().toISOString(),
+          updatedAt:
+            changes.raw !== record.raw
+              ? new Date().toISOString()
+              : record.updatedAt,
         };
         if (extraction) next.extraction = extraction;
         else delete next.extraction;

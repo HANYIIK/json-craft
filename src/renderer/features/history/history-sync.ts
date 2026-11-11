@@ -54,6 +54,7 @@ export class HistorySync {
     this.entries.set(record.id, {
       persisted: true,
       deleted: false,
+      ...(!revive && existing?.snapshot ? { snapshot: existing.snapshot } : {}),
       ...("raw" in record
         ? {
             snapshot: record,

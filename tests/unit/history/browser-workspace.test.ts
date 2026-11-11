@@ -47,6 +47,53 @@ function record(): HistoryRecord {
   };
 }
 
+test("browser history preserves edit times during view changes and sorts actual edits newest first", async (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: Date.parse("2026-11-01T00:00:00Z"),
+  });
+  const { workspace } = fixture(t);
+  const first = await workspace.create(record());
+  t.mock.timers.tick(60_000);
+  const second = await workspace.create({
+    ...record(),
+    id: "second",
+    name: "second.json",
+  });
+  t.mock.timers.tick(60_000);
+  const changes = {
+    raw: record().raw,
+    options: { indent: "4" as const, autoUnescape: false, repair: false },
+    extraction: { key: "id", path: "$.id", occurrence: 1 },
+  };
+  assert.equal(
+    (await workspace.update(first.id, changes)).updatedAt,
+    first.updatedAt,
+  );
+  await workspace.setActive(first.id);
+  assert.equal((await workspace.read(first.id)).updatedAt, first.updatedAt);
+  assert.equal(
+    (await workspace.rename(first.id, first.name)).updatedAt,
+    first.updatedAt,
+  );
+  assert.deepEqual(
+    (await workspace.load()).records.map((value) => value.id),
+    [second.id, first.id],
+  );
+  t.mock.timers.tick(60_000);
+  const edited = await workspace.update(first.id, {
+    ...changes,
+    raw: '{"edited":true}',
+  });
+  assert.equal(edited.updatedAt, new Date().toISOString());
+  const restored = await createBrowserWorkspace().load();
+  assert.deepEqual(
+    restored.records.map((value) => value.id),
+    [first.id, second.id],
+  );
+  assert.equal(restored.records[1].updatedAt, second.updatedAt);
+});
+
 test("browser workspaces default to following the system theme", async (t) => {
   const { workspace } = fixture(t);
   const state = await workspace.load();

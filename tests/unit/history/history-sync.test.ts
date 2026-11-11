@@ -108,6 +108,26 @@ function fixture(t: TestContext, initial: HistoryRecord[] = []) {
   return { records, events, calls, api, sync };
 }
 
+test("refreshing summaries preserves loaded snapshots and does not save untouched files", async (t) => {
+  const initial = [record("first", "one"), record("second", "two")];
+  const { sync, calls } = fixture(t, initial);
+  for (const value of initial) sync.adopt(value);
+  for (const value of initial) sync.adopt(summary(value));
+  for (const value of initial) sync.schedule(value);
+  await sync.flushAll();
+  assert.equal(calls.update, 0);
+  assert.equal(sync.hasPending(), false);
+  sync.schedule(record("edited", "one"));
+  await sync.flushAll();
+  assert.equal(calls.update, 1);
+  for (const value of [record("edited", "one"), initial[1]]) {
+    sync.adopt(summary(value));
+    sync.schedule(value);
+  }
+  await sync.flushAll();
+  assert.equal(calls.update, 1);
+});
+
 test("coalesces edits arriving during a save and commits the latest snapshot", async (t) => {
   const initial = record();
   const { api, sync, records, events } = fixture(t, [initial]);

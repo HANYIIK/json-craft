@@ -146,6 +146,59 @@ test("creates persistent records without parsing or normalizing the input", asyn
   assert.equal((await restart().read("first")).raw, raw);
 });
 
+test("last edit times change only for content edits and renames and sort newest first across restarts", async (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: Date.parse("2026-11-01T00:00:00Z"),
+  });
+  const { store, restart } = await fixture(t);
+  const first = await store.create(record("first"));
+  t.mock.timers.tick(60_000);
+  const second = await store.create(record("second"));
+  t.mock.timers.tick(60_000);
+  const viewUpdate = {
+    raw: record().raw,
+    options: { indent: "4" as const, autoUnescape: false, repair: false },
+    extraction: { key: "id", path: "$.id", occurrence: 1 },
+  };
+  assert.equal(
+    (await store.update(first.id, viewUpdate)).updatedAt,
+    first.updatedAt,
+  );
+  assert.equal(
+    (await store.update(first.id, viewUpdate)).updatedAt,
+    first.updatedAt,
+  );
+  await store.setActive(first.id);
+  await store.read(first.id);
+  assert.deepEqual(
+    (await store.load()).records.map((value) => value.id),
+    [second.id, first.id],
+  );
+  t.mock.timers.tick(60_000);
+  const edited = await store.update(first.id, {
+    ...viewUpdate,
+    raw: '{"edited":true}',
+  });
+  assert.equal(edited.updatedAt, new Date().toISOString());
+  assert.equal(edited.createdAt, first.createdAt);
+  assert.equal((await store.read(second.id)).updatedAt, second.updatedAt);
+  const restored = await restart().load();
+  assert.deepEqual(
+    restored.records.map((value) => value.id),
+    [first.id, second.id],
+  );
+  assert.equal(restored.records[0].updatedAt, edited.updatedAt);
+  assert.equal(restored.records[1].updatedAt, second.updatedAt);
+  t.mock.timers.tick(60_000);
+  const renamed = await store.rename(second.id, "renamed.json");
+  assert.equal(renamed.updatedAt, new Date().toISOString());
+  assert.deepEqual(
+    (await restart().load()).records.map((value) => value.id),
+    [second.id, first.id],
+  );
+});
+
 test("updates input, options and extraction and restores the latest values after restart", async (t) => {
   const { store, restart } = await fixture(t);
   const original = await store.create(record());
