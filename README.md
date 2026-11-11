@@ -43,10 +43,10 @@ No account or internet connection is needed. Supports UTF-8 JSON files up to **2
 
 | Platform                  | Installer                                                                                                                                                                                                       |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS 13+ · Apple Silicon | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-arm64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-arm64.zip) |
-| macOS 13+ · Intel         | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-x64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-macOS-x64.zip)     |
-| Windows · x64             | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-Windows-x64.exe)                                                                                                          |
-| Windows · ARM64           | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.3.0/JSON-Craft-0.3.0-Windows-arm64.exe)                                                                                                        |
+| macOS 13+ · Apple Silicon | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-arm64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-arm64.zip) |
+| macOS 13+ · Intel         | [DMG](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-x64.dmg) · [ZIP](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-macOS-x64.zip)     |
+| Windows · x64             | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-Windows-x64.exe)                                                                                                          |
+| Windows · ARM64           | [EXE](https://github.com/HANYIIK/json-craft/releases/download/v0.3.1/JSON-Craft-0.3.1-Windows-arm64.exe)                                                                                                        |
 
 **macOS:** Open the DMG and drag JSON Craft into Applications, or unzip the ZIP. These builds are not notarized by Apple; if the first launch is blocked, see [Apple’s opening instructions](https://support.apple.com/en-us/102445).
 

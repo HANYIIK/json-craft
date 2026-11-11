@@ -40,6 +40,7 @@ import {
   projectDiffTexts,
   type DiffTextProjection,
 } from "./diff-text-projection";
+import { computeDocumentDiff } from "./document-diff";
 import { projectedJson } from "./projected-json";
 import { projectedSearch } from "./projected-search";
 import { useDiffLayout } from "./use-diff-layout";
@@ -95,7 +96,24 @@ export interface RepairDiffEditorProps {
   request?: RepairDiffEditorRequest;
   onStateChange?: (state: RepairDiffEditorState) => void;
 }
-const boundedDiff = { scanLimit: 2_000, timeout: 100 };
+function diffChunks(
+  a: Text,
+  b: Text,
+  changes: readonly Change[],
+  precise: boolean,
+) {
+  return Chunk.build(a, b, { override: () => changes }).map(
+    (chunk) =>
+      new Chunk(
+        chunk.changes,
+        chunk.fromA,
+        chunk.toA,
+        chunk.fromB,
+        chunk.toB,
+        precise,
+      ),
+  );
+}
 const collapseContext = { margin: 3, minSize: 4 };
 const colorModes = {
   light: EditorView.theme({}, { dark: false }),
@@ -235,13 +253,10 @@ export const RepairDiffEditor = forwardRef<
     const exactChanges = validatedRepairChanges(stage);
     const a = Text.of(stage.before.split("\n")),
       b = Text.of(stage.after.split("\n"));
-    const chunks = Chunk.build(
-      a,
-      b,
-      exactChanges
-        ? { ...boundedDiff, override: () => nativeRepairChanges(exactChanges) }
-        : boundedDiff,
-    );
+    const computed = exactChanges
+      ? { changes: nativeRepairChanges(exactChanges), precise: true }
+      : computeDocumentDiff(stage.before, stage.after);
+    const chunks = diffChunks(a, b, computed.changes, computed.precise);
     const changes = chunks.flatMap((chunk) =>
       chunk.changes.map(
         (change) =>
@@ -253,7 +268,7 @@ export const RepairDiffEditor = forwardRef<
           ),
       ),
     );
-    return { exactChanges, chunks, changes, a, b };
+    return { exactChanges, chunks, changes, a, b, precise: computed.precise };
   }, [stage]);
   const layout = useDiffLayout(host, Math.max(model.a.lines, model.b.lines));
   const projection = useMemo(() => {
@@ -266,10 +281,12 @@ export const RepairDiffEditor = forwardRef<
     );
     let chunks =
       projected.a.active || projected.b.active
-        ? Chunk.build(projected.a.doc, projected.b.doc, {
-            ...boundedDiff,
-            override: () => projected.changes,
-          })
+        ? diffChunks(
+            projected.a.doc,
+            projected.b.doc,
+            projected.changes,
+            model.precise,
+          )
         : model.chunks;
     let wrapFallback = false;
     if (layout?.maxDOMHeight && (projected.a.active || projected.b.active)) {
@@ -288,10 +305,12 @@ export const RepairDiffEditor = forwardRef<
             preferWordBoundaries: true,
           },
         );
-        chunks = Chunk.build(projected.a.doc, projected.b.doc, {
-          ...boundedDiff,
-          override: () => projected.changes,
-        });
+        chunks = diffChunks(
+          projected.a.doc,
+          projected.b.doc,
+          projected.changes,
+          model.precise,
+        );
         wrapFallback = true;
       }
     }
@@ -608,7 +627,7 @@ export const RepairDiffEditor = forwardRef<
         collapseUnchanged: latest.current.showFull
           ? undefined
           : collapseContext,
-        diffConfig: { ...boundedDiff, override: () => projection.changes },
+        diffConfig: { override: () => projection.changes },
       });
       merge.a.dom.parentElement!.dataset.testid = "diff-before";
       merge.b.dom.parentElement!.dataset.testid = "diff-after";
@@ -662,9 +681,7 @@ export const RepairDiffEditor = forwardRef<
         activeDifference: -1,
         contextExpanded: latest.current.showFull,
         navigationKind: model.exactChanges ? "change" : "chunk",
-        precise:
-          model.exactChanges !== null ||
-          model.chunks.every((chunk) => chunk.precise),
+        precise: model.precise,
         ...repairDiffLineCounts(model.chunks, model.a, model.b),
       };
       if (saved) {

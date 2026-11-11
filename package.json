@@ -1,6 +1,6 @@
 {
   "name": "json-craft",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "An offline JSON formatter, repair, diff and log extraction workbench.",
   "main": "electron/main.cjs",

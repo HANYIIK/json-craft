@@ -283,6 +283,75 @@ try {
     (value) => value === "1",
     "Packaged comparison did not navigate to the next difference",
   );
+  await page.getByTestId("comparison-back").click();
+  const largeRows = Array.from({ length: 1_000 }, (_, index) =>
+    Object.fromEntries(
+      Array.from({ length: 10 }, (_, field) => [
+        `field${field}`,
+        `before-${String(index).padStart(4, "0")}-${field}`,
+      ]),
+    ),
+  );
+  const largeLeft = JSON.stringify(largeRows, null, 2);
+  const largeRight = JSON.stringify(
+    largeRows.map((row, index) => ({
+      ...row,
+      field5:
+        index % 20 === 0 ? row.field5.replace("before", "after") : row.field5,
+    })),
+    null,
+    2,
+  );
+  assert.equal(largeLeft.split("\n").length, 12_002);
+  await page.evaluate(
+    ({ left, right }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(
+        new File([left], "large-left.json", { type: "application/json" }),
+      );
+      transfer.items.add(
+        new File([right], "large-right.json", { type: "application/json" }),
+      );
+      document
+        .querySelector(".application")
+        .dispatchEvent(
+          new DragEvent("drop", {
+            bubbles: true,
+            cancelable: true,
+            dataTransfer: transfer,
+          }),
+        );
+    },
+    { left: largeLeft, right: largeRight },
+  );
+  const largeDiff = await compare(page);
+  await poll(
+    () => largeDiff.getAttribute("data-difference-count"),
+    (value) => value === "50",
+    "Packaged large JSON comparison combined separate changes into coarse blocks",
+  );
+  assert.equal(await largeDiff.getAttribute("data-chunk-count"), "50");
+  assert.equal(await largeDiff.getAttribute("data-added-lines"), "50");
+  assert.equal(await largeDiff.getAttribute("data-removed-lines"), "50");
+  assert.equal(await largeDiff.getAttribute("data-precise"), "true");
+  await page.getByTestId("comparison-next").click();
+  await poll(
+    () => largeDiff.getAttribute("data-active-difference"),
+    (value) => value === "1",
+    "Packaged large JSON comparison did not navigate to the next difference",
+  );
+  await poll(
+    () =>
+      page
+        .getByTestId("diff-after")
+        .locator(".cm-line")
+        .filter({ hasText: "after-0020-5" })
+        .locator(".cm-changedText")
+        .filter({ hasText: "after" })
+        .count(),
+    (value) => value > 0,
+    "Packaged large JSON comparison did not highlight the next changed value",
+  );
   assert.equal(
     await page.evaluate(
       async () => (await window.desktop.workspace.load()).records.length,
@@ -365,7 +434,11 @@ try {
     "Packaged extracted preview did not expand",
   );
   assert.equal(await page.getByTestId("log-input-editor").isVisible(), false);
-  assert.equal(await copyEditor(page, "log-preview-editor"), lastPreview);
+  await poll(
+    () => copyEditor(page, "log-preview-editor"),
+    (value) => value === lastPreview,
+    "Packaged expanded preview did not finish rendering",
+  );
   const previewCopy = extraction.locator(".log-preview-footer .copy-button");
   await previewCopy.click();
   await poll(
@@ -443,6 +516,7 @@ try {
         "json-compare",
         "key-order-alignment",
         "comparison-context-navigation",
+        "large-json-diff",
         "log-json-extraction",
         "result-tabs",
         "log-result-migration",
